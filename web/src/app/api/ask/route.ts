@@ -14,7 +14,6 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { runTool, Scan, TOOL_DEFINITIONS } from "./tools";
-import scanData from "../../../../public/data/scan.json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +36,20 @@ const MAX_ITERATIONS = 6;
 // good enough to soak up basic abuse). Keys are "ip:bucket".
 const seen = new Map<string, number>();
 
-const scan = scanData as unknown as Scan;
+// Scan is fetched from the deployment's own static-asset URL on first call
+// (Vercel can't read public/ via fs and bundling 6MB+ of JSON breaks the build).
+let scanCache: Scan | null = null;
+async function loadScan(req: Request): Promise<Scan> {
+  if (scanCache) return scanCache;
+  const origin =
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : new URL(req.url).origin;
+  const r = await fetch(`${origin}/data/scan.json`, { cache: "force-cache" });
+  if (!r.ok) throw new Error(`scan fetch failed: ${r.status}`);
+  scanCache = (await r.json()) as Scan;
+  return scanCache;
+}
 
 function rateKey(ip: string): string {
   const hour = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
@@ -85,6 +97,16 @@ export async function POST(req: Request) {
   }
   if (question.length > 500) {
     return Response.json({ error: "Question too long (max 500 chars)" }, { status: 400 });
+  }
+
+  let scan: Scan;
+  try {
+    scan = await loadScan(req);
+  } catch (e: any) {
+    return Response.json(
+      { error: `Server failed to load scan: ${e.message ?? "unknown"}` },
+      { status: 500 },
+    );
   }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
