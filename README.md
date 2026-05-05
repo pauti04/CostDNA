@@ -4,7 +4,7 @@
 
 > **▶ Live demo: [cost-dna-parths-projects-dc857b64.vercel.app](https://cost-dna-parths-projects-dc857b64.vercel.app)** — chat with the agent over a synthetic 68-resource AWS account. No setup, runs on GPT-4o.
 
-![CostDNA live demo — chat agent answering with real per-team spend](docs/images/live-demo.png)
+![CostDNA live demo — multi-turn chat with the agent answering using real tool calls](docs/images/live-demo.gif)
 
 ```bash
 $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
@@ -289,7 +289,7 @@ costdna apply     --predictions runs/$(date +%F)/predictions.csv  # dry-run
 costdna apply     --predictions runs/$(date +%F)/predictions.csv --apply
 ```
 
-Full walkthrough: see [DEPLOYMENT.md](DEPLOYMENT.md).
+Full walkthrough: see [DEPLOYMENT.md](DEPLOYMENT.md). Considering running it on your team's account? Forward [docs/evaluation.md](docs/evaluation.md) — a one-pager covering the IAM policy needed, what it does, what it can't do, and what the failure modes look like.
 
 ### Build the labeled environment yourself
 ```bash
