@@ -1,0 +1,34 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+.envrc
+
+# data + artifacts (downloaded datasets are large; never commit them)
+data/
+runs/
+labels.csv
+simulation/logs/
+*.csv
+!examples/*.csv
+checkpoints/
+*.pt
+*.pth
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# editor
+.vscode/
+.idea/
+*.swp
+.DS_Store

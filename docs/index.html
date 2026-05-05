@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CostDNA — Behavioral GNN for cloud cost attribution</title>
+<meta name="description" content="Open-source tool that infers AWS team ownership from behavioral fingerprints. Validated on 3 public cloud datasets — including catching label-leakage in two of them.">
+<meta property="og:title" content="CostDNA — Behavioral GNN for cloud cost attribution">
+<meta property="og:description" content="I built a GNN to attribute cloud resources to teams. Then I audited my own results and caught a 97% tautology.">
+<meta property="og:image" content="images/alibaba-scale.png">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117;
+  --bg-soft: #161b22;
+  --bg-card: #1c232c;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-soft: #8b949e;
+  --accent: #f0b429;       /* amber, matches the chart's GraphSAGE line */
+  --accent-2: #58a6ff;     /* link blue */
+  --good: #3fb950;
+  --bad:  #f85149;
+  --warn: #d29922;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+html { color-scheme: dark; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.55;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+header.hero {
+  padding: 80px 0 60px;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at top, rgba(240,180,41,0.06), transparent 60%);
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-bottom: 14px;
+}
+h1 {
+  font-size: 52px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  margin-bottom: 18px;
+}
+h1 .accent { color: var(--accent); }
+.tag {
+  font-size: 22px;
+  color: var(--text-soft);
+  max-width: 760px;
+  margin-bottom: 28px;
+  line-height: 1.45;
+}
+.cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 120ms, border-color 120ms;
+}
+.btn:hover { background: var(--bg-soft); border-color: var(--accent); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1a1a;
+  font-weight: 600;
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+.kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+.kpi .v { font-size: 28px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+.kpi .l { font-size: 13px; color: var(--text-soft); margin-top: 4px; }
+
+section { padding: 70px 0; border-bottom: 1px solid var(--border); }
+section h2 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+}
+section h2 .num {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+  vertical-align: middle;
+  margin-right: 12px;
+}
+section .lead { font-size: 18px; color: var(--text-soft); max-width: 760px; margin-bottom: 32px; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.card h3 { font-size: 18px; margin-bottom: 8px; }
+.card p { color: var(--text-soft); }
+
+p { margin-bottom: 14px; color: var(--text); }
+section p { color: var(--text); }
+section p.muted { color: var(--text-soft); }
+
+img { max-width: 100%; display: block; border-radius: 8px; border: 1px solid var(--border); }
+
+pre {
+  background: #0a0e14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #d2d8df;
+  margin: 18px 0;
+}
+pre.terminal { font-size: 13px; }
+pre .prompt { color: var(--accent); }
+pre .ok { color: var(--good); }
+pre .warn { color: var(--warn); }
+pre .bad { color: var(--bad); }
+pre .dim { color: var(--text-soft); }
+
+code {
+  font-family: var(--mono);
+  background: var(--bg-soft);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: var(--text);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 18px 0;
+}
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th { font-weight: 600; color: var(--text-soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+td.num { font-family: var(--mono); text-align: right; }
+td.bold { font-weight: 600; color: var(--accent); }
+.flag-good { color: var(--good); font-family: var(--mono); }
+.flag-bad  { color: var(--bad);  font-family: var(--mono); }
+
+ul.bullets { list-style: none; padding-left: 0; }
+ul.bullets li {
+  padding-left: 28px;
+  position: relative;
+  margin-bottom: 10px;
+  color: var(--text-soft);
+}
+ul.bullets li::before {
+  content: "▸";
+  position: absolute;
+  left: 8px;
+  color: var(--accent);
+}
+ul.bullets li b { color: var(--text); }
+
+footer {
+  padding: 60px 0 80px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+footer a { color: var(--accent-2); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+.callout {
+  background: linear-gradient(180deg, rgba(240,180,41,0.07), rgba(240,180,41,0.02));
+  border: 1px solid rgba(240,180,41,0.3);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin: 22px 0;
+  color: var(--text);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  h1 { font-size: 36px; }
+  section { padding: 50px 0; }
+  .tag { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Open-source / behavioral attribution / GraphSAGE</div>
+    <h1>CostDNA — finds which team owns every AWS resource. <span class="accent">Even untagged ones.</span></h1>
+    <p class="tag">Tag-based cost attribution fails on 40–60% of real AWS resources. CostDNA infers ownership from behavioral fingerprints (IAM access patterns, VPC flows, deploy timing, cost time-series shape) using a Graph Neural Network — and writes the inferred tags back to AWS.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/pauti04/costdna">↗ View on GitHub</a>
+      <a class="btn" href="#audit">The audit story →</a>
+      <a class="btn" href="#try">Try it yourself</a>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="v">3</div><div class="l">Real public cloud datasets validated</div></div>
+      <div class="kpi"><div class="v">91%</div><div class="l">Attribution accuracy on Alibaba (5 apps)</div></div>
+      <div class="kpi"><div class="v">61×</div><div class="l">Lift over random at 100 apps</div></div>
+      <div class="kpi"><div class="v">14</div><div class="l">CLI subcommands, all production-grade</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="problem">
+  <div class="wrap">
+    <h2><span class="num">01</span>The problem</h2>
+    <p class="lead">Every FinOps team's most painful metric: the percentage of AWS spend that can't be attributed to any team. Industry estimates put it at <b>40–60%</b>.</p>
+    <p>Tagging is the standard answer, but tags get out of sync. Resources are created in a hurry. Engineers leave. Tags drift. Existing FinOps dashboards (CloudHealth, Vantage, Apptio) are <b>only as good as the tags you have</b> — and on most accounts, the tags you have aren't enough.</p>
+    <p class="muted">CostDNA is the missing input layer: a tool that <em>infers</em> the missing tags from behavior, then writes them back so existing tooling actually works.</p>
+  </div>
+</section>
+
+<section id="approach">
+  <div class="wrap">
+    <h2><span class="num">02</span>The approach</h2>
+    <p class="lead">Every team leaves a fingerprint. Same IAM role touches the resource. Same CI/CD pipeline deploys to it. Same engineers' API calls hit it at predictable times. A GNN learns this fingerprint and uses it to attribute previously-untagged resources.</p>
+    <div class="card">
+      <h3>Pipeline</h3>
+      <p>Collect signals (CloudTrail, VPC Flow Logs, Cost Explorer) → extract 9 behavioral features per resource → build a graph (network + IAM + VPC edges) → train a 4-layer GraphSAGE classifier → output predictions with confidence + dollars-attributed + anomaly flags.</p>
+    </div>
+    <pre class="terminal"><span class="prompt">$</span> costdna scan --aws-profile prod
+<span class="dim">→ Collecting from AWS  (142 resources, 18,304 events, 612 flow edges)</span>
+<span class="dim">→ Training GraphSAGE</span>
+<span class="dim">→ Looking for cost spikes</span>
+
+╭─── CostDNA — Executive summary ────────────────────────────╮
+│ You have <b>$9,570</b> in untagged spend across 142 resources. │
+│                                                            │
+│ <span class="ok">✓ Ready to tag</span>: 138 resources, $9,186 (96%) at ≥0.7 conf  │
+│ <span class="warn">⚠ Need review</span>:   4 resources,   $384 (4%)  below 0.7    │
+│                                                            │
+│ Recommended actions:                                       │
+│   • Tag 17 resources as <b>ml</b>      → moves $4,412.54 out  │
+│   • Tag 14 resources as <b>data</b>    → moves $2,142.65 out  │
+│   • Tag 16 resources as <b>backend</b> → moves $1,829.61 out  │
+│   • Review 4 low-confidence resources before tagging.      │
+╰────────────────────────────────────────────────────────────╯</pre>
+  </div>
+</section>
+
+<section id="audit">
+  <div class="wrap">
+    <h2><span class="num">03</span>The audit story</h2>
+    <p class="lead">I had a 97% accuracy result on Microsoft's published 2.6M-VM Azure dataset. I audited it. <b>It was a tautology.</b></p>
+
+    <div class="callout">
+      <div class="label">The catch</div>
+      <p style="margin:0">Across all 33,205 deployments in the Azure trace, <b>100%</b> mapped 1:1 to a single subscription. So <code>deployment_id</code>, used as a graph edge, was a perfect lookup of <code>subscription_id</code>. LabelProp's "97%" was a graph database join, not learning.</p>
+    </div>
+
+    <p>Most engineers stop when they see a high accuracy number and ship it. I caught the leak by asking <em>"are you sure data is accurate?"</em> The same audit on Microsoft's Philly DL trace surfaced another partial leak: 85% of users belong to exactly one virtual cluster, so user-IAM edges encoded most of the team-membership signal.</p>
+
+    <p>Three datasets, three different shortcuts, one consistent finding:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>Resources</th>
+          <th>Teams</th>
+          <th>First-cut acc</th>
+          <th>Audited shortcut</th>
+          <th>Honest behavioral acc</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Microsoft Azure</b></td>
+          <td class="num">2.6M VMs</td>
+          <td class="num">100</td>
+          <td class="num"><span class="flag-bad">97%</span></td>
+          <td><code>deployment_id ≡ sub</code> (100% deterministic)</td>
+          <td class="num">6.9% (12× rand)</td>
+        </tr>
+        <tr>
+          <td><b>Microsoft Philly</b></td>
+          <td class="num">117K jobs</td>
+          <td class="num">15</td>
+          <td class="num"><span class="flag-bad">89%</span></td>
+          <td><code>user_id → vc</code> (85% deterministic)</td>
+          <td class="num">14% (2× rand)</td>
+        </tr>
+        <tr>
+          <td><b>Alibaba 2018</b></td>
+          <td class="num">71K containers</td>
+          <td class="num">100</td>
+          <td class="num bold">61%</td>
+          <td><span class="flag-good">none — 99.7% of machines run 2+ apps</span></td>
+          <td class="num bold">61% (61× rand)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><b>The finding:</b> production cost attribution is mostly a metadata-lookup problem; behavioral fingerprinting matters specifically when metadata is missing or unreliable. CostDNA's synthetic environment deliberately reproduces those gaps (cross-team services, reassignments, vendor unknowns) — that's where the GNN earns its keep.</p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2><span class="num">04</span>Results — Alibaba (the audit-clean dataset)</h2>
+    <p class="lead">71,500 production containers from 9,790 apps in a real Alibaba cluster. 5-fold cross-validated. No graph leak.</p>
+
+    <img src="images/alibaba-scale.png" alt="Accuracy vs number of apps on the Alibaba dataset">
+
+    <table>
+      <thead>
+        <tr>
+          <th>N apps</th>
+          <th class="num">GraphSAGE</th>
+          <th class="num">k-NN</th>
+          <th class="num">LogReg</th>
+          <th class="num">Random</th>
+          <th class="num">Lift over random</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">5</td>   <td class="num bold">91.2%</td><td class="num">88.3%</td><td class="num">66.5%</td><td class="num">20%</td><td class="num">4.6×</td></tr>
+        <tr><td class="num">10</td>  <td class="num bold">90.5%</td><td class="num">85.1%</td><td class="num">68.0%</td><td class="num">10%</td><td class="num">9.1×</td></tr>
+        <tr><td class="num">25</td>  <td class="num">82.8%</td>     <td class="num bold">82.9%</td><td class="num">53.3%</td><td class="num">4%</td><td class="num">21×</td></tr>
+        <tr><td class="num">50</td>  <td class="num">70.2%</td>     <td class="num bold">75.8%</td><td class="num">33.0%</td><td class="num">2%</td><td class="num">38×</td></tr>
+        <tr><td class="num">100</td> <td class="num">60.8%</td>     <td class="num bold">73.8%</td><td class="num">19.7%</td><td class="num">1%</td><td class="num">74×</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="visual">
+  <div class="wrap">
+    <h2><span class="num">05</span>Visual proof — embedding space</h2>
+    <p class="lead">GraphSAGE learns 2D-projected representations where same-team resources cluster together and unowned ones sit visibly separate.</p>
+    <p><b>Synthetic AWS env (4 teams + 4 unowned categories).</b> Note the tan "unowned" cluster — vendor / legacy / orphan / shadow resources — sitting visibly apart from the team clusters. The anomaly detector picks them up automatically without being told they're unowned.</p>
+    <img src="images/umap-synthetic.png" alt="UMAP embedding of synthetic AWS resources, colored by team">
+    <p style="margin-top: 24px"><b>Real Azure data (10 subscriptions).</b> Looser clustering — features are weaker (only summary CPU stats available), graph structure provides almost all the signal. Same-color points still group, but with more overlap.</p>
+    <img src="images/umap-azure.png" alt="UMAP embedding of real Azure VMs, colored by subscription">
+  </div>
+</section>
+
+<section id="capabilities">
+  <div class="wrap">
+    <h2><span class="num">06</span>What's in the pipeline</h2>
+    <p class="lead">14 production CLI subcommands. 5 baselines benchmarked at every step. K-fold cross-validation everywhere.</p>
+    <ul class="bullets">
+      <li><b>costdna scan</b> — full pipeline: collect signals, train GNN, output exec summary + attribution + anomalies + cost-spike explanations</li>
+      <li><b>costdna apply</b> — write predicted teams back to AWS as tags (--dry-run by default; emits CLI commands or boto3 calls)</li>
+      <li><b>costdna doctor</b> — preflight: catches every reason a real-AWS run will fail (IAM perms, missing log groups, Cost Explorer not enabled)</li>
+      <li><b>costdna benchmark</b> — k-fold or multi-seed comparison of GraphSAGE vs LogReg / k-NN / LabelProp / Majority</li>
+      <li><b>costdna ablate</b> — feature & edge ablation, quantifies which components carry the load</li>
+      <li><b>costdna calibrate</b> — Expected Calibration Error + reliability diagram (does 0.7 confidence really mean 70% correct?)</li>
+      <li><b>costdna learn</b> — active-learning bootstrap: how few confirmed labels to attribute everything?</li>
+      <li><b>costdna diff</b> — drift detection across two saved scans, surfaces resources that changed team</li>
+      <li><b>costdna discover</b> — auto-find candidate teams from IAM role naming patterns</li>
+      <li><b>… plus inspect, simulate, the loaders for AWS / Azure / Alibaba / Philly traces, and a synthetic generator with 5 hard-case kinds</b></li>
+    </ul>
+  </div>
+</section>
+
+<section id="try">
+  <div class="wrap">
+    <h2><span class="num">07</span>Try it yourself</h2>
+    <p class="lead">No AWS account needed for the synthetic demo. Real-cloud paths require ~30 min of setup.</p>
+
+    <div class="card">
+      <h3>30-second synthetic demo</h3>
+      <pre><span class="prompt">$</span> git clone https://github.com/pauti04/costdna && cd costdna
+<span class="prompt">$</span> pip install -e .
+<span class="prompt">$</span> costdna scan --synthetic --show-kind</pre>
+    </div>
+
+    <div class="card">
+      <h3>Validate on Microsoft's Azure Public Dataset</h3>
+      <pre><span class="prompt">$</span> curl -L -o data/vmtable.csv.gz \
+    https://azurepublicdatasettraces.blob.core.windows.net/azurepublicdatasetv2/trace_data/vmtable/vmtable.csv.gz
+<span class="prompt">$</span> costdna benchmark --azure-trace data/vmtable.csv.gz --kfold 5
+<span class="dim"># See the audit story unfold in real time.</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>Run against your live AWS account</h3>
+      <pre><span class="prompt">$</span> cd terraform && terraform apply
+<span class="prompt">$</span> costdna doctor --aws-profile prod
+<span class="prompt">$</span> costdna scan   --aws-profile prod --save-dir runs/$(date +%F)
+<span class="prompt">$</span> costdna apply  --predictions runs/$(date +%F)/predictions.csv --apply</pre>
+    </div>
+    <p class="muted">Full runbook: <a href="https://github.com/pauti04/costdna/blob/main/DEPLOYMENT.md" style="color: var(--accent-2)">DEPLOYMENT.md</a></p>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <h2><span class="num">08</span>Stack</h2>
+    <ul class="bullets">
+      <li><b>Python 3.11</b> · pandas · numpy · scikit-learn · statsmodels · networkx</li>
+      <li><b>PyTorch 2.x</b> + <b>PyTorch Geometric</b> for the GraphSAGE classifier (4 layers, residual connections, hidden_dim=16, tuned for sparse-feature regimes)</li>
+      <li><b>boto3</b> with adaptive retry config and per-source rate limiting for CloudTrail's <code>lookup_events</code> API</li>
+      <li><b>Click</b> + <b>Rich</b> for the CLI (panels, sparkline learning curves, color-coded confidence)</li>
+      <li><b>Terraform</b> for a 4-team labeled AWS environment (CloudTrail data events, VPC Flow Logs, IAM AssumeRole-from-account)</li>
+      <li><b>UMAP</b> + <b>matplotlib</b> for embedding visualizations</li>
+      <li><b>pytest</b> + <b>GitHub Actions</b> CI on every commit</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Built by <a href="https://github.com/pauti04">@pauti04</a> · <a href="https://github.com/pauti04/costdna">github.com/pauti04/costdna</a> · MIT licensed</p>
+    <p style="margin-top: 8px">If you're hiring for cloud-cost / FinOps / ML-infra roles — this is the kind of work I'd like to do full-time.</p>
+  </div>
+</footer>
+
+</body>
+</html>
