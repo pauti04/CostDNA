@@ -2,9 +2,17 @@
 
 **Tells you which team owns every AWS resource — and writes the tags for you.**
 
-Tag-based cost attribution fails on 40–60% of real AWS resources. CostDNA infers ownership from behavioral fingerprints (IAM access, VPC traffic, deploy timing, cost time-series shape) and writes the inferred tags back to AWS so your existing FinOps tooling just works.
+> [pauti04.github.io/CostDNA](https://pauti04.github.io/CostDNA/) — full landing page with the methodology, charts, and audit narrative.
 
-Validated end-to-end on **two production-scale public cloud datasets** (Azure 2.6M VMs, Microsoft Philly 117K DL jobs) plus a controlled synthetic AWS env and a live AWS account. The methodological finding emerged from auditing my own results: across both real datasets, the first-cut high-accuracy numbers were inflated by structural-metadata shortcuts (we caught and documented both), making *the audit itself* the durable contribution.
+![GraphSAGE embedding — 4 teams + unowned cluster, automatically separated](docs/images/umap-synthetic.png)
+
+*GraphSAGE embedding space on the synthetic env: 4 teams form clean clusters; the tan "unowned" cluster (vendor / legacy / orphan / shadow resources) sits visibly apart and is caught automatically by the anomaly detector.*
+
+---
+
+Tag-based cost attribution fails on 40–60% of real AWS resources. CostDNA infers ownership from behavioral fingerprints (IAM access, VPC traffic, deploy timing, cost time-series shape) using a Graph Neural Network, and writes the inferred tags back to AWS so existing FinOps tooling works on previously-unattributable spend.
+
+**Methodological finding (the most defensible thing in the repo):** I tested CostDNA on two production-scale public cloud datasets (Microsoft's 2.6M-VM Azure trace and Microsoft Philly's 117K-DL-job trace) and audited my own results. *Both* first-cut high-accuracy numbers were tautologies — `deployment_id` is 100% deterministic of `subscription_id` on Azure; `user_id` is 85% deterministic of `vc` on Philly. With those leaks removed, behavioral attribution alone is modest. The audit pattern itself is the contribution: production cloud attribution is mostly a metadata-lookup problem, and behavioral fingerprinting matters specifically when metadata is missing or unreliable — exactly the gap CostDNA's synthetic env reproduces (where GraphSAGE hits 95%+ while feature-only baselines fail catastrophically).
 
 ```bash
 $ costdna scan --aws-profile prod
