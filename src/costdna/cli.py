@@ -34,7 +34,7 @@ from costdna.benchmark import (attributed_dollars, run_benchmark,
                                run_benchmark_kfold, run_benchmark_multiseed)
 from costdna.calibrate import calibration_curve
 from costdna.collectors import (collect_aws_signals, generate_synthetic_signals,
-                                load_alibaba_trace, load_azure_trace)
+                                load_azure_trace)
 from costdna.discover import discover_teams
 from costdna.drift import compute_drift
 from costdna.explain import explain_top_spikes
@@ -76,16 +76,7 @@ def _effective_teams(metadata: pd.DataFrame) -> tuple[str, ...]:
 def _load(synthetic: bool, aws_profile, region, days, seed,
           azure_trace: Path | None = None,
           azure_top_n: int = 25, azure_max_per_sub: int = 200,
-          azure_readings: Path | None = None,
-          alibaba_trace: Path | None = None,
-          alibaba_top_n: int = 25, alibaba_max_per_app: int = 200):
-    if alibaba_trace is not None:
-        console.print(f"[bold cyan]→[/] Loading Alibaba Cluster Trace from "
-                      f"[bold]{alibaba_trace}[/] (top {alibaba_top_n} apps × "
-                      f"up to {alibaba_max_per_app} containers)")
-        return load_alibaba_trace(alibaba_trace, days=days, seed=seed,
-                                  top_n_apps=alibaba_top_n,
-                                  max_containers_per_app=alibaba_max_per_app)
+          azure_readings: Path | None = None):
     if azure_trace is not None:
         suffix = " + real CPU readings" if azure_readings else " (summary stats only)"
         console.print(f"[bold cyan]→[/] Loading Microsoft Azure public dataset "
@@ -167,20 +158,13 @@ def main() -> None:
               default=None,
               help="Optional vm_cpu_readings file. Uses real per-VM time-series "
                    "instead of synthesizing from summary stats.")
-@click.option("--alibaba-trace", "alibaba_trace",
-              type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              default=None,
-              help="Path to Alibaba container_meta.csv. Validates on real "
-                   "container-to-app attribution (~71K containers, ~9800 apps).")
-@click.option("--alibaba-top-n", default=25, show_default=True)
-@click.option("--alibaba-max-per-app", default=200, show_default=True)
 @click.option("--save-umap", is_flag=True,
               help="Save a 2D UMAP plot of GraphSAGE embeddings (requires --save-dir).")
 def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
          show_truth, show_kind, labels_path, azure_trace,
-         azure_top_n, azure_max_per_sub, save_umap, azure_readings, alibaba_trace, alibaba_top_n, alibaba_max_per_app):
+         azure_top_n, azure_max_per_sub, save_umap, azure_readings):
     """Run the full pipeline: collect → features → graph → train → attribute → explain."""
-    if azure_trace is not None or alibaba_trace is not None:
+    if azure_trace is not None:
         synthetic = False
     elif synthetic is None:
         synthetic = aws_profile is None
@@ -188,10 +172,7 @@ def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
         synthetic, aws_profile, region, days, seed,
         azure_trace=azure_trace,
         azure_top_n=azure_top_n, azure_max_per_sub=azure_max_per_sub,
-        azure_readings=azure_readings,
-        alibaba_trace=alibaba_trace,
-        alibaba_top_n=alibaba_top_n,
-        alibaba_max_per_app=alibaba_max_per_app,
+        azure_readings=azure_readings
     )
     if metadata.empty:
         console.print("[red]No resources found.[/]")
@@ -360,7 +341,7 @@ def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
 @click.option("--azure-top-n", default=25, show_default=True)
 @click.option("--azure-max-per-sub", default=200, show_default=True)
 def benchmark(synthetic, aws_profile, region, days, seed, epochs, seeds, kfold,
-              labels_path, from_dir, azure_trace, azure_top_n, azure_max_per_sub, azure_readings, alibaba_trace, alibaba_top_n, alibaba_max_per_app):
+              labels_path, from_dir, azure_trace, azure_top_n, azure_max_per_sub, azure_readings):
     """All baselines vs the GNN — multi-seed (--seeds N) or k-fold (--kfold K)."""
     if kfold > 0:
         if from_dir is not None:
@@ -383,10 +364,7 @@ def benchmark(synthetic, aws_profile, region, days, seed, epochs, seeds, kfold,
                 synth, aws_profile, region, days, seed,
                 azure_trace=azure_trace,
                 azure_top_n=azure_top_n, azure_max_per_sub=azure_max_per_sub,
-                azure_readings=azure_readings,
-                alibaba_trace=alibaba_trace,
-                alibaba_top_n=alibaba_top_n,
-                alibaba_max_per_app=alibaba_max_per_app,
+                azure_readings=azure_readings
             )
         if labels_path is not None:
             ext = pd.read_csv(labels_path)
@@ -561,18 +539,15 @@ def calibrate(synthetic, days, seed, epochs, n_bins):
 @click.option("--azure-top-n", default=10, show_default=True)
 @click.option("--azure-max-per-sub", default=200, show_default=True)
 def learn(synthetic, days, seed, budget, initial, batch, strategy, compare_all,
-          azure_trace, azure_top_n, azure_max_per_sub, azure_readings, alibaba_trace, alibaba_top_n, alibaba_max_per_app):
+          azure_trace, azure_top_n, azure_max_per_sub, azure_readings):
     """Active learning: how many confirmed labels to attribute thousands?"""
-    if azure_trace is not None or alibaba_trace is not None:
+    if azure_trace is not None:
         synthetic = False
     signals, metadata, flows, _ = _load(
         synthetic, None, "us-east-1", days, seed,
         azure_trace=azure_trace,
         azure_top_n=azure_top_n, azure_max_per_sub=azure_max_per_sub,
-        azure_readings=azure_readings,
-        alibaba_trace=alibaba_trace,
-        alibaba_top_n=alibaba_top_n,
-        alibaba_max_per_app=alibaba_max_per_app,
+        azure_readings=azure_readings
     )
     if "team" not in metadata.columns:
         console.print("[red]Active learning sim needs ground truth.[/]")

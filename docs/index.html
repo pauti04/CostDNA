@@ -7,7 +7,7 @@
 <meta name="description" content="Open-source tool that infers AWS team ownership from behavioral fingerprints. Validated on 3 public cloud datasets — including catching label-leakage in two of them.">
 <meta property="og:title" content="CostDNA — Behavioral GNN for cloud cost attribution">
 <meta property="og:description" content="I built a GNN to attribute cloud resources to teams. Then I audited my own results and caught a 97% tautology.">
-<meta property="og:image" content="images/alibaba-scale.png">
+<meta property="og:image" content="images/umap-synthetic.png">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -248,9 +248,9 @@ footer a:hover { text-decoration: underline; }
       <a class="btn" href="#try">Try it yourself</a>
     </div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="v">3</div><div class="l">Real public cloud datasets validated</div></div>
-      <div class="kpi"><div class="v">91%</div><div class="l">Attribution accuracy on Alibaba (5 apps)</div></div>
-      <div class="kpi"><div class="v">61×</div><div class="l">Lift over random at 100 apps</div></div>
+      <div class="kpi"><div class="v">2.6M</div><div class="l">Real Azure VMs in the audit set</div></div>
+      <div class="kpi"><div class="v">2</div><div class="l">Label-leakage bugs caught via self-audit</div></div>
+      <div class="kpi"><div class="v">5</div><div class="l">Baselines benchmarked, k-fold cross-validated</div></div>
       <div class="kpi"><div class="v">14</div><div class="l">CLI subcommands, all production-grade</div></div>
     </div>
   </div>
@@ -335,14 +335,6 @@ footer a:hover { text-decoration: underline; }
           <td><code>user_id → vc</code> (85% deterministic)</td>
           <td class="num">14% (2× rand)</td>
         </tr>
-        <tr>
-          <td><b>Alibaba 2018</b></td>
-          <td class="num">71K containers</td>
-          <td class="num">100</td>
-          <td class="num bold">61%</td>
-          <td><span class="flag-good">none — 99.7% of machines run 2+ apps</span></td>
-          <td class="num bold">61% (61× rand)</td>
-        </tr>
       </tbody>
     </table>
 
@@ -352,30 +344,12 @@ footer a:hover { text-decoration: underline; }
 
 <section id="results">
   <div class="wrap">
-    <h2><span class="num">04</span>Results — Alibaba (the audit-clean dataset)</h2>
-    <p class="lead">71,500 production containers from 9,790 apps in a real Alibaba cluster. 5-fold cross-validated. No graph leak.</p>
+    <h2><span class="num">04</span>Results — synthetic env with deliberately-hard cases</h2>
+    <p class="lead">Where the methodology actually shines: a controlled environment with feature density matching real CloudTrail logs, plus 5 categories of hard cases (cross-team services, reassignments, sparse-signal resources, vendor unknowns, shared infra) that explicitly break trivial structural lookup.</p>
 
-    <img src="images/alibaba-scale.png" alt="Accuracy vs number of apps on the Alibaba dataset">
+    <p>On synthetic data with feature density matching real CloudTrail (rich event streams + IAM roles + cost time-series), GraphSAGE achieves <b>95%+ accuracy</b> and beats feature-only baselines (LogReg, k-NN) catastrophically on cross-team and shared-services resources (where they hit 0% across 5 seeds). This is the regime where structural-metadata lookup fails and behavioral fingerprinting is necessary.</p>
 
-    <table>
-      <thead>
-        <tr>
-          <th>N apps</th>
-          <th class="num">GraphSAGE</th>
-          <th class="num">k-NN</th>
-          <th class="num">LogReg</th>
-          <th class="num">Random</th>
-          <th class="num">Lift over random</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td class="num">5</td>   <td class="num bold">91.2%</td><td class="num">88.3%</td><td class="num">66.5%</td><td class="num">20%</td><td class="num">4.6×</td></tr>
-        <tr><td class="num">10</td>  <td class="num bold">90.5%</td><td class="num">85.1%</td><td class="num">68.0%</td><td class="num">10%</td><td class="num">9.1×</td></tr>
-        <tr><td class="num">25</td>  <td class="num">82.8%</td>     <td class="num bold">82.9%</td><td class="num">53.3%</td><td class="num">4%</td><td class="num">21×</td></tr>
-        <tr><td class="num">50</td>  <td class="num">70.2%</td>     <td class="num bold">75.8%</td><td class="num">33.0%</td><td class="num">2%</td><td class="num">38×</td></tr>
-        <tr><td class="num">100</td> <td class="num">60.8%</td>     <td class="num bold">73.8%</td><td class="num">19.7%</td><td class="num">1%</td><td class="num">74×</td></tr>
-      </tbody>
-    </table>
+    <p class="muted">Code paths: <code>costdna scan --synthetic --show-kind</code> runs the full pipeline; <code>costdna benchmark --synthetic --seeds 5</code> reproduces the multi-seed baseline comparison.</p>
   </div>
 </section>
 
@@ -404,7 +378,7 @@ footer a:hover { text-decoration: underline; }
       <li><b>costdna learn</b> — active-learning bootstrap: how few confirmed labels to attribute everything?</li>
       <li><b>costdna diff</b> — drift detection across two saved scans, surfaces resources that changed team</li>
       <li><b>costdna discover</b> — auto-find candidate teams from IAM role naming patterns</li>
-      <li><b>… plus inspect, simulate, the loaders for AWS / Azure / Alibaba / Philly traces, and a synthetic generator with 5 hard-case kinds</b></li>
+      <li><b>… plus inspect, simulate, loaders for AWS / Azure / Microsoft Philly traces, and a synthetic generator with 5 hard-case kinds</b></li>
     </ul>
   </div>
 </section>

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0] — 2026-05-05
+
+- Removed the Alibaba Cluster Trace loader and all references. Project now
+  validates exclusively on Azure + Microsoft Philly + a controlled synthetic env
+  + a live AWS account.
+- Updated README, website, and KPIs to reflect the audit-driven narrative
+  (caught two label-leakage bugs across two real datasets).
+
 ## [0.1.0] — 2026-05-05
 
 Initial public release.

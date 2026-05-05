@@ -4,7 +4,7 @@
 
 Tag-based cost attribution fails on 40–60% of real AWS resources. CostDNA infers ownership from behavioral fingerprints (IAM access, VPC traffic, deploy timing, cost time-series shape) and writes the inferred tags back to AWS so your existing FinOps tooling just works.
 
-Validated across **three production-scale public cloud datasets** (Azure 2.6M VMs, Microsoft Philly 117K DL jobs, Alibaba 71K containers) plus a synthetic AWS env. Headline numbers: **91% attribution on 5 real Alibaba apps, 60.8% on 100 apps (61× random)** — the only dataset where no audit-found leak makes the result trivial. The cross-dataset audit is itself the methodological finding: real cloud attribution is mostly a metadata-lookup problem.
+Validated end-to-end on **two production-scale public cloud datasets** (Azure 2.6M VMs, Microsoft Philly 117K DL jobs) plus a controlled synthetic AWS env and a live AWS account. The methodological finding emerged from auditing my own results: across both real datasets, the first-cut high-accuracy numbers were inflated by structural-metadata shortcuts (we caught and documented both), making *the audit itself* the durable contribution.
 
 ```bash
 $ costdna scan --aws-profile prod
@@ -64,35 +64,18 @@ These become **node features** in a graph where edges come from VPC flows, share
 
 ## Evidence
 
-### Real cloud data: three audits, one consistent finding
+### Real cloud data: two audits, one consistent finding
 
-We tested CostDNA on three production-scale public datasets, and audited each one for label leakage. The same pattern emerges every time: **structural metadata dominates real-world cloud attribution.**
+We tested CostDNA on two production-scale public datasets and audited each one for label leakage. The same pattern emerged both times: **structural metadata dominates real-world cloud attribution.**
 
-| Dataset | Resources | Teams | Best method | Top accuracy | Audited "shortcut" | Honest behavioral acc |
-|---|---|---|---|---|---|---|
-| **Microsoft Azure** | 2.6M VMs / 100 subs | 100 | LabelProp | 97% (tautology) | `deployment_id → subscription` (100% deterministic) | **GraphSAGE 6.9%** (12× random) |
-| **Microsoft Philly** | 117K DL jobs / 15 VCs | 15 | LabelProp | 89% | `user → vc` (85% deterministic) | **GraphSAGE 14%** (2× random) |
-| **Alibaba** | 71K containers / ~10K apps | 100 | k-NN | 73% | none — 99.7% of machines run 2+ apps | **GraphSAGE 60.8%** (61× random) |
-
-**The methodological finding:** in real cloud data, the dominant attribution signal is almost always *structural metadata* — deployment IDs, IAM principals, machine assignments — not behavioral time-series. CostDNA's first-cut numbers on Azure (97%) and Philly (89%) looked great until we audited and discovered the labels were essentially encoded in the graph already. **The Alibaba dataset is the only one where no such shortcut exists**, and there the methodology produces a genuinely defensible 60.8% on 100 real apps (61× random).
-
-This is the right negative-result-positive-finding combination: production cost attribution is mostly a metadata-lookup problem; behavioral fingerprinting matters specifically when metadata is missing or unreliable, which is exactly the case CostDNA's synthetic env reproduces.
-
-### Alibaba Cluster Trace 2018 — the legitimate real-world validation
-
-![Alibaba scale](docs/images/alibaba-scale.png)
-
-71,500 real production containers from 9,790 apps. **99.7% of machines run multiple apps** — verified in our audit — so `machine_id` is a noisy signal, not a tautology.
-
-| N apps | GraphSAGE | k-NN | LogReg | LabelProp | Random |
+| Dataset | Resources | Teams | First-cut accuracy | Audited "shortcut" | Honest behavioral accuracy |
 |---|---|---|---|---|---|
-| 5 | **91.2% ± 2.0%** | 88.3% ± 1.4% | 66.5% ± 3.4% | 42.6% ± 2.3% | 20.0% |
-| 10 | **90.5% ± 1.8%** | 85.1% ± 0.9% | 68.0% ± 2.9% | 35.3% ± 1.4% | 10.0% |
-| 25 | 82.8% ± 0.3% | **82.9% ± 0.4%** | 53.3% ± 0.5% | 23.7% ± 0.5% | 4.0% |
-| 50 | 70.2% ± 1.1% | **75.8% ± 0.4%** | 33.0% ± 0.9% | 15.2% ± 0.2% | 2.0% |
-| 100 | 60.8% ± 3.4% | **73.8% ± 0.3%** | 19.7% ± 1.0% | 10.9% ± 0.3% | 1.0% |
+| **Microsoft Azure** | 2.6M VMs / 100 subs | 100 | LabelProp 97% | `deployment_id → subscription` (100% deterministic) | **GraphSAGE 6.9%** (12× random) |
+| **Microsoft Philly** | 117K DL jobs / 15 VCs | 15 | LabelProp 89% | `user → vc` (85% deterministic) | **GraphSAGE 14%** (2× random) |
 
-GraphSAGE wins on 5-10 apps; k-NN takes over at 25+ when template features (cpu_request, memory) become the dominant signal. Both real, both far above random.
+**The methodological finding:** in real cloud data, the dominant attribution signal is almost always *structural metadata* — deployment IDs, IAM principals, machine assignments — not behavioral time-series. CostDNA's first-cut numbers on Azure (97%) and Philly (89%) looked great until we audited and discovered the labels were essentially encoded in the graph already.
+
+This negative-result-as-positive-finding is the most defensible thing in the project: production cost attribution is mostly a metadata-lookup problem; behavioral fingerprinting matters specifically when metadata is missing or unreliable, which is exactly what the synthetic env's hard-case kinds reproduce.
 
 ### Microsoft Philly DL trace — audit case study
 
