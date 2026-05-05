@@ -2,17 +2,16 @@
  * POST /api/ask
  *
  * Live agent endpoint backing the AskLive component on the landing page.
- * Loads the pre-baked synthetic scan, runs an Anthropic tool-use loop against
+ * Loads the pre-baked synthetic scan, runs an OpenAI tool-use loop against
  * the 9 ported tools, returns the answer + tool calls.
  *
  * Body: { question: string, history?: any[] }
  * Env:
- *   ANTHROPIC_API_KEY — required (set in Vercel project env)
+ *   OPENAI_API_KEY — required (set in Vercel project env)
  *   COSTDNA_RATE_LIMIT_PER_HOUR — default 5; questions per IP per hour
- *   COSTDNA_DAILY_BUDGET_USD — default 10; soft cap to avoid surprise bills
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { runTool, Scan, TOOL_DEFINITIONS } from "./tools";
 
 export const runtime = "nodejs";
@@ -31,6 +30,7 @@ When a user asks a question:
 This is a synthetic AWS account with 4 teams (backend, data, ml, platform) and ~68 resources.`;
 
 const MAX_ITERATIONS = 6;
+const MODEL = "gpt-4o";
 
 // In-memory rate limit (Vercel functions are ephemeral but per-region this is
 // good enough to soak up basic abuse). Keys are "ip:bucket".
@@ -51,6 +51,17 @@ async function loadScan(req: Request): Promise<Scan> {
   return scanCache;
 }
 
+// OpenAI uses {type:"function", function:{name, description, parameters}}
+// while our tools.ts keeps the simpler Anthropic-shape definitions.
+const OPENAI_TOOLS: OpenAI.Chat.ChatCompletionTool[] = TOOL_DEFINITIONS.map((t) => ({
+  type: "function",
+  function: {
+    name: t.name,
+    description: t.description,
+    parameters: t.input_schema as Record<string, unknown>,
+  },
+}));
+
 function rateKey(ip: string): string {
   const hour = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
   return `${ip}:${hour}`;
@@ -65,11 +76,11 @@ function getClientIp(req: Request): string {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return Response.json(
       {
         error:
-          "Live demo not configured — ANTHROPIC_API_KEY is missing on the server. " +
+          "Live demo not configured — OPENAI_API_KEY is missing on the server. " +
           "Run `costdna chat` locally instead, or contact pauti04 on GitHub.",
       },
       { status: 503 },
@@ -109,9 +120,16 @@ export async function POST(req: Request) {
     );
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const messages: Anthropic.MessageParam[] = [
-    ...((body.history as Anthropic.MessageParam[] | undefined) ?? []),
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  // Strip any incoming system messages to avoid duplicates / drift.
+  const incomingHistory = ((body.history as any[] | undefined) ?? []).filter(
+    (m) => m && m.role !== "system",
+  );
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...(incomingHistory as OpenAI.Chat.ChatCompletionMessageParam[]),
     { role: "user", content: question },
   ];
 
@@ -120,51 +138,51 @@ export async function POST(req: Request) {
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     let resp;
     try {
-      resp = await client.messages.create({
-        model: "claude-sonnet-4-5",
+      resp = await client.chat.completions.create({
+        model: MODEL,
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        tools: TOOL_DEFINITIONS as Anthropic.Tool[],
         messages,
+        tools: OPENAI_TOOLS,
+        tool_choice: "auto",
       });
     } catch (e: any) {
+      const status = e?.status ?? 502;
       return Response.json(
-        { error: `Anthropic API error: ${e.message || String(e)}` },
+        { error: `OpenAI API error: ${status} ${e?.message ?? String(e)}` },
         { status: 502 },
       );
     }
 
-    if (resp.stop_reason === "end_turn" || resp.stop_reason === "stop_sequence") {
-      const answer = resp.content
-        .filter((b: any) => b.type === "text")
-        .map((b: any) => b.text)
-        .join("");
-      messages.push({ role: "assistant", content: resp.content });
+    const msg = resp.choices[0]?.message;
+    if (!msg) break;
+    messages.push(msg as OpenAI.Chat.ChatCompletionMessageParam);
+
+    const calls = msg.tool_calls ?? [];
+    if (calls.length === 0) {
+      // Final answer from the assistant.
       return Response.json({
-        answer: answer.trim(),
+        answer: (msg.content ?? "").trim(),
         tool_calls: toolCalls,
-        history: messages,
+        history: messages.filter((m) => m.role !== "system"),
       });
     }
 
-    if (resp.stop_reason === "tool_use") {
-      messages.push({ role: "assistant", content: resp.content });
-      const toolResults: any[] = [];
-      for (const block of resp.content) {
-        if (block.type !== "tool_use") continue;
-        const result = runTool(scan, block.name, block.input);
-        toolCalls.push({ tool: block.name, args: block.input, result });
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: JSON.stringify(result).slice(0, 8000),  // bound payload
-        });
+    for (const tc of calls) {
+      if (tc.type !== "function") continue;
+      let args: any = {};
+      try {
+        args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+      } catch {
+        args = {};
       }
-      messages.push({ role: "user", content: toolResults });
-      continue;
+      const result = runTool(scan, tc.function.name, args);
+      toolCalls.push({ tool: tc.function.name, args, result });
+      messages.push({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: JSON.stringify(result).slice(0, 8000),
+      });
     }
-
-    break;
   }
 
   return Response.json(
