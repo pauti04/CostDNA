@@ -21,8 +21,13 @@ read -r -p "AWS profile to use [default]: " AWS_PROFILE
 AWS_PROFILE=${AWS_PROFILE:-default}
 export AWS_PROFILE
 
-read -r -p "Email for the budget alert: " ALERT_EMAIL
-if [ -z "$ALERT_EMAIL" ]; then echo "  email is required"; exit 1; fi
+while :; do
+  read -r -p "Email for the budget alert: " ALERT_EMAIL
+  if [[ "$ALERT_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+    break
+  fi
+  echo "  that doesn't look like an email address. Try again."
+done
 
 read -r -p "Region [us-east-1]: " AWS_REGION
 AWS_REGION=${AWS_REGION:-us-east-1}
