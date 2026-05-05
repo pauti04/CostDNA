@@ -13,9 +13,8 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { promises as fs } from "fs";
-import path from "path";
 import { runTool, Scan, TOOL_DEFINITIONS } from "./tools";
+import scanData from "../../../../public/data/scan.json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,15 +37,7 @@ const MAX_ITERATIONS = 6;
 // good enough to soak up basic abuse). Keys are "ip:bucket".
 const seen = new Map<string, number>();
 
-let scanCache: Scan | null = null;
-
-async function loadScan(): Promise<Scan> {
-  if (scanCache) return scanCache;
-  const p = path.join(process.cwd(), "public", "data", "scan.json");
-  const raw = await fs.readFile(p, "utf-8");
-  scanCache = JSON.parse(raw) as Scan;
-  return scanCache;
-}
+const scan = scanData as unknown as Scan;
 
 function rateKey(ip: string): string {
   const hour = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
@@ -94,16 +85,6 @@ export async function POST(req: Request) {
   }
   if (question.length > 500) {
     return Response.json({ error: "Question too long (max 500 chars)" }, { status: 400 });
-  }
-
-  let scan: Scan;
-  try {
-    scan = await loadScan();
-  } catch (e) {
-    return Response.json(
-      { error: "Server failed to load synthetic scan." },
-      { status: 500 },
-    );
   }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

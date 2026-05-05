@@ -10,6 +10,7 @@ Run via:  scripts/bake-scan.py
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -84,9 +85,15 @@ def main() -> None:
         },
     }
 
+    def _strict(o):
+        if isinstance(o, dict):  return {k: _strict(v) for k, v in o.items()}
+        if isinstance(o, list):  return [_strict(v) for v in o]
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)): return None
+        return o
+
     out_path = Path("web/public/data/scan.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(out, default=str))
+    out_path.write_text(json.dumps(_strict(out), default=str, allow_nan=False))
     size_mb = out_path.stat().st_size / 1024 / 1024
     print(f"→ wrote {out_path} ({size_mb:.1f} MB, "
           f"{len(out['predictions'])} resources, "
