@@ -11,6 +11,8 @@ venv/
 
 # data + artifacts (downloaded datasets are large; never commit them)
 data/
+!web/public/data/
+!web/public/data/scan.json
 runs/
 labels.csv
 simulation/logs/
