@@ -702,6 +702,57 @@ def watch(state_dir, aws_profile, region, days, epochs, seed, labels_path,
 
 
 @main.command()
+@click.argument("question", nargs=-1, required=True)
+@click.option("--from-dir", "from_dir",
+              type=click.Path(exists=True, file_okay=False, path_type=Path),
+              required=True,
+              help="Directory of a previous `costdna scan --save-dir <dir>` run.")
+@click.option("--model", default="claude-sonnet-4-5", show_default=True,
+              help="Anthropic model name.")
+@click.option("--api-key", "api_key", default=None,
+              help="ANTHROPIC_API_KEY (or set as env var).")
+@click.option("--show-tool-calls", is_flag=True,
+              help="Print each tool the agent called and what it returned.")
+def ask(question, from_dir, model, api_key, show_tool_calls):
+    """Ask a natural-language question about your AWS cost attribution.
+
+    Example:
+        costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
+        costdna ask "which resources are unowned?" --from-dir runs/today
+        costdna ask "top 5 spenders on team ml" --from-dir runs/today
+    """
+    from costdna.agent import ask as agent_ask, load_context
+    q = " ".join(question)
+    console.print(f"[bold cyan]→[/] Loading scan context from [bold]{from_dir}[/]")
+    ctx = load_context(from_dir)
+    console.print(f"  {len(ctx.predictions)} resources, "
+                  f"{len(ctx.teams)} teams, "
+                  f"{len(ctx.signals):,} signal rows")
+    console.print(f"\n[bold cyan]?[/] [italic]{q}[/]\n")
+    try:
+        reply = agent_ask(q, ctx, model=model, api_key=api_key)
+    except (ImportError, RuntimeError) as e:
+        console.print(f"[red]{e}[/]")
+        sys.exit(1)
+
+    if show_tool_calls and reply.tool_calls:
+        from rich.table import Table
+        from rich import box
+        tbl = Table(title="Tool calls", box=box.SIMPLE_HEAD)
+        tbl.add_column("Tool"); tbl.add_column("Args"); tbl.add_column("Result (preview)")
+        for tc in reply.tool_calls:
+            preview = json.dumps(tc["result"], default=str)[:120] + "…"
+            tbl.add_row(tc["tool"], json.dumps(tc["args"]), preview)
+        console.print(tbl)
+        console.print()
+
+    from rich.panel import Panel
+    from rich import box
+    console.print(Panel(reply.answer, title="CostDNA",
+                        box=box.ROUNDED, border_style="green"))
+
+
+@main.command()
 @click.option("--port", default=8501, show_default=True,
               help="Port for the Streamlit web UI.")
 def serve(port: int) -> None:

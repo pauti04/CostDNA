@@ -1,6 +1,28 @@
 # CostDNA
 
-**Tells you which team owns every AWS resource — and writes the tags for you.**
+**A natural-language agent for AWS cost attribution.** Ask it questions about your cloud bill in English; it answers with specific resources, teams, dollar amounts, and timestamps — backed by a behavioral GraphSAGE model + LLM-derived semantic features over CloudTrail / IAM / Cost Explorer.
+
+```bash
+$ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
+? why did our bill spike Tuesday?
+
+╭─── CostDNA ────────────────────────────────────────────────────────────╮
+│ Resource `i-0c4f3230` (predicted team: ml, conf 0.92) had a $7.30      │
+│ cost spike at Tue 16:00 UTC. Team ml's deploy at Tue 14:18 (commit    │
+│ a4f2c91, repo ml-training-pipeline) is the most likely cause          │
+│ (Granger p=0.000). Two other ml-team RDS instances spiked at the      │
+│ same time, suggesting the deploy fanned out across the cluster.       │
+╰────────────────────────────────────────────────────────────────────────╯
+```
+
+The agent has 6 tools available: `summarize_account`, `attribute_resource`, `top_spenders`, `find_cost_spikes`, `find_anomalies`, `search_resources`. Claude (or any tool-using LLM) chains them to answer questions like:
+
+- *"Which 5 resources are racking up the most spend?"*
+- *"What does `i-9f8e7d` belong to?"*
+- *"Which resources don't fit any team — should I investigate them?"*
+- *"Show me everything ml-team owns over $100/day"*
+
+Setup: `pip install 'costdna[agent]'` + `export ANTHROPIC_API_KEY=...`.
 
 > [pauti04.github.io/CostDNA](https://pauti04.github.io/CostDNA/) — full landing page with the methodology, charts, and audit narrative.
 
