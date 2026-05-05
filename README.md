@@ -15,12 +15,30 @@ $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
 ╰────────────────────────────────────────────────────────────────────────╯
 ```
 
-The agent has 6 tools available: `summarize_account`, `attribute_resource`, `top_spenders`, `find_cost_spikes`, `find_anomalies`, `search_resources`. Claude (or any tool-using LLM) chains them to answer questions like:
+The agent has **9 tools** available — Claude (or any tool-using LLM) chains them to answer questions like:
 
-- *"Which 5 resources are racking up the most spend?"*
-- *"What does `i-9f8e7d` belong to?"*
-- *"Which resources don't fit any team — should I investigate them?"*
-- *"Show me everything ml-team owns over $100/day"*
+- *"Which 5 resources are racking up the most spend?"* → `top_spenders`
+- *"What does `i-9f8e7d` belong to?"* → `attribute_resource`
+- *"Find the largest cost spikes and what caused them"* → `find_cost_spikes`
+- *"Which resources don't fit any team?"* → `find_anomalies`
+- *"Show me everything that hasn't been used in days"* → `find_idle`
+- *"Compare the ml team and the data team"* → `compare_teams`
+- *"What did `prod-rds-985438` do recently?"* → `signal_history`
+- *"Find anything with 'warehouse' in the name"* → `search_resources`
+- *"Just summarize the account"* → `summarize_account`
+
+**Three ways to use the agent:**
+
+```bash
+# 1. One-shot question (CLI)
+costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
+
+# 2. Multi-turn chat (CLI REPL)
+costdna chat --from-dir runs/today
+
+# 3. Web chat UI (Streamlit)
+costdna serve   # then open the "💬 Chat with the agent" tab
+```
 
 Setup: `pip install 'costdna[agent]'` + `export ANTHROPIC_API_KEY=...`.
 

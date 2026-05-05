@@ -208,6 +208,82 @@ def tool_search_resources(ctx: CostDnaContext, substring: str,
     }
 
 
+def tool_signal_history(ctx: CostDnaContext, resource_id: str,
+                         hours: int = 24) -> dict:
+    """Recent activity for one resource — events and cost over time."""
+    if ctx.signals.empty:
+        return {"error": "No signal data available."}
+    sigs = ctx.signals[ctx.signals["resource_id"] == resource_id].copy()
+    if sigs.empty:
+        return {"resource_id": resource_id, "events": 0, "note": "no signals for this resource"}
+    sigs = sigs.sort_values("timestamp")
+    if len(sigs) > 0 and "timestamp" in sigs.columns:
+        cutoff = sigs["timestamp"].max() - pd.Timedelta(hours=hours)
+        sigs = sigs[sigs["timestamp"] >= cutoff]
+    by_type = sigs.groupby("signal_type").size().to_dict()
+    cost_total = float(sigs[sigs["signal_type"] == "cost"]["value"].sum()) if "signal_type" in sigs.columns else 0.0
+    sample = sigs.head(10).to_dict("records")
+    return {
+        "resource_id": resource_id,
+        "window_hours": hours,
+        "n_events": int(len(sigs)),
+        "events_by_type": by_type,
+        "total_cost_in_window": cost_total,
+        "first_10_events": sample,
+    }
+
+
+def tool_find_idle(ctx: CostDnaContext, max_events: int = 5) -> dict:
+    """Resources with very few events — candidates for cleanup or deprecation."""
+    if ctx.signals.empty:
+        return {"error": "No signal data available."}
+    counts = (ctx.signals.groupby("resource_id").size()
+              .reset_index(name="n_events"))
+    idle = counts[counts["n_events"] <= max_events]
+    idle = idle.merge(ctx.predictions[["resource_id", "team_pred", "confidence",
+                                       "resource_type"]],
+                       on="resource_id", how="left")
+    cost = ctx.signals[ctx.signals["signal_type"] == "cost"]
+    if not cost.empty:
+        cost_per = cost.groupby("resource_id")["value"].sum().reset_index(name="total_cost")
+        idle = idle.merge(cost_per, on="resource_id", how="left")
+    idle = idle.sort_values("total_cost" if "total_cost" in idle.columns else "n_events",
+                             ascending=False)
+    return {
+        "max_events_threshold": max_events,
+        "n_idle": len(idle),
+        "resources": idle.head(20).to_dict("records"),
+    }
+
+
+def tool_compare_teams(ctx: CostDnaContext, team_a: str, team_b: str) -> dict:
+    """Side-by-side comparison of two teams: resource counts, spend, top resources."""
+    cost_per_rid = {}
+    if not ctx.signals.empty:
+        c = ctx.signals[ctx.signals["signal_type"] == "cost"]
+        if not c.empty:
+            cost_per_rid = c.groupby("resource_id")["value"].sum().to_dict()
+
+    def stats(team):
+        rows = ctx.predictions[ctx.predictions["team_pred"] == team]
+        spend = sum(float(cost_per_rid.get(r, 0.0)) for r in rows["resource_id"])
+        types = rows["resource_type"].value_counts().to_dict() if "resource_type" in rows.columns else {}
+        rows_with_cost = rows.assign(cost=rows["resource_id"].map(cost_per_rid).fillna(0.0))
+        top3 = (rows_with_cost.sort_values("cost", ascending=False)
+                              .head(3)[["resource_id", "cost"]]
+                              .to_dict("records"))
+        return {
+            "team": team,
+            "n_resources": int(len(rows)),
+            "total_spend": spend,
+            "avg_confidence": float(rows["confidence"].mean()) if len(rows) else 0.0,
+            "by_type": types,
+            "top_3_resources": top3,
+        }
+
+    return {"team_a": stats(team_a), "team_b": stats(team_b)}
+
+
 # Tool registry — JSON schemas for Claude.
 TOOLS_SPEC = [
     {
@@ -285,6 +361,50 @@ TOOLS_SPEC = [
             "required": ["substring"],
         },
     },
+    {
+        "name": "signal_history",
+        "description": "Show recent CloudTrail events and cost samples for a "
+                       "specific resource over a time window. Useful for "
+                       "answering 'what did this resource do recently?'",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "resource_id": {"type": "string"},
+                "hours": {"type": "integer", "default": 24},
+            },
+            "required": ["resource_id"],
+        },
+    },
+    {
+        "name": "find_idle",
+        "description": "Resources with very few events in the scan window. "
+                       "Candidates for cleanup, deprecation, or cost reduction. "
+                       "Returns total cost for each so you can prioritize.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_events": {
+                    "type": "integer", "default": 5,
+                    "description": "Threshold for 'idle' — resources with at "
+                                   "most this many events are returned.",
+                },
+            },
+        },
+    },
+    {
+        "name": "compare_teams",
+        "description": "Side-by-side comparison of two teams: resource counts, "
+                       "total spend, average confidence, breakdown by resource "
+                       "type, top 3 resources each.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "team_a": {"type": "string"},
+                "team_b": {"type": "string"},
+            },
+            "required": ["team_a", "team_b"],
+        },
+    },
 ]
 
 TOOL_REGISTRY: dict[str, Callable[..., dict]] = {
@@ -294,6 +414,9 @@ TOOL_REGISTRY: dict[str, Callable[..., dict]] = {
     "find_cost_spikes":    tool_find_cost_spikes,
     "find_anomalies":      tool_find_anomalies,
     "search_resources":    tool_search_resources,
+    "signal_history":      tool_signal_history,
+    "find_idle":           tool_find_idle,
+    "compare_teams":       tool_compare_teams,
 }
 
 
@@ -329,12 +452,19 @@ class AgentReply:
     answer: str
     tool_calls: list[dict]   # each: {"tool": name, "args": ..., "result": ...}
     raw_response: dict
+    history: list[dict] | None = None   # full message list for multi-turn
 
 
 def ask(question: str, ctx: CostDnaContext, *, model: str = DEFAULT_MODEL,
-        api_key: str | None = None, max_iterations: int = 6) -> AgentReply:
+        api_key: str | None = None, max_iterations: int = 6,
+        history: list[dict] | None = None) -> AgentReply:
     """Send a question to Claude with the CostDNA tools available; loop on
-    tool_use until the model produces a final answer."""
+    tool_use until the model produces a final answer.
+
+    `history`: optional prior messages list for multi-turn conversation.
+    Append the current question; the function returns a new history list
+    including the assistant's reply, ready to feed into the next call.
+    """
     try:
         import anthropic
     except ImportError as e:
@@ -350,7 +480,8 @@ def ask(question: str, ctx: CostDnaContext, *, model: str = DEFAULT_MODEL,
         )
 
     client = anthropic.Anthropic(api_key=api_key)
-    messages = [{"role": "user", "content": question}]
+    messages: list[dict] = list(history or [])
+    messages.append({"role": "user", "content": question})
     tool_calls: list[dict] = []
 
     for _ in range(max_iterations):
@@ -365,8 +496,10 @@ def ask(question: str, ctx: CostDnaContext, *, model: str = DEFAULT_MODEL,
         # If the model is done thinking, return the answer.
         if resp.stop_reason in ("end_turn", "stop_sequence"):
             answer = "".join(b.text for b in resp.content if hasattr(b, "text"))
+            messages.append({"role": "assistant", "content": resp.content})
             return AgentReply(answer=answer.strip(), tool_calls=tool_calls,
-                              raw_response={"id": resp.id, "model": resp.model})
+                              raw_response={"id": resp.id, "model": resp.model},
+                              history=messages)
 
         # Otherwise it requested tool use. Execute and append tool_result blocks.
         if resp.stop_reason == "tool_use":

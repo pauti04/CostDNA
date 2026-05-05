@@ -753,6 +753,65 @@ def ask(question, from_dir, model, api_key, show_tool_calls):
 
 
 @main.command()
+@click.option("--from-dir", "from_dir",
+              type=click.Path(exists=True, file_okay=False, path_type=Path),
+              required=True,
+              help="Directory of a previous `costdna scan --save-dir <dir>` run.")
+@click.option("--model", default="claude-sonnet-4-5", show_default=True)
+@click.option("--api-key", "api_key", default=None)
+def chat(from_dir, model, api_key):
+    """Interactive multi-turn chat with the CostDNA agent.
+
+    Same agent and tools as `costdna ask`, but stays in a loop and
+    remembers context across questions. Type 'exit' or Ctrl-D to leave.
+
+    Example session:
+        > summarize the account
+        > what's racking up the most spend on team ml?
+        > tell me about i-0c4f3230 specifically
+    """
+    from costdna.agent import ask as agent_ask, load_context
+    console.print(f"[bold cyan]→[/] Loading scan context from [bold]{from_dir}[/]")
+    ctx = load_context(from_dir)
+    console.print(f"  {len(ctx.predictions)} resources, "
+                  f"{len(ctx.teams)} teams loaded\n")
+    console.print("[dim]Type your questions. 'exit' or Ctrl-D to leave.[/]\n")
+
+    history: list[dict] | None = None
+    turn = 0
+    while True:
+        try:
+            q = click.prompt(f"[{turn}]", prompt_suffix=" ❯ ", default="",
+                              show_default=False)
+        except (EOFError, click.exceptions.Abort):
+            console.print("\n[dim]bye.[/]")
+            return
+        q = q.strip()
+        if not q:
+            continue
+        if q.lower() in ("exit", "quit", "bye", ":q"):
+            console.print("[dim]bye.[/]")
+            return
+
+        try:
+            reply = agent_ask(q, ctx, model=model, api_key=api_key,
+                              history=history)
+        except (ImportError, RuntimeError) as e:
+            console.print(f"[red]{e}[/]")
+            return
+        except KeyboardInterrupt:
+            console.print("\n[dim]interrupted.[/]")
+            continue
+
+        history = reply.history
+        from rich.panel import Panel
+        from rich import box
+        console.print(Panel(reply.answer, title=f"CostDNA · turn {turn}",
+                            box=box.ROUNDED, border_style="green"))
+        turn += 1
+
+
+@main.command()
 @click.option("--port", default=8501, show_default=True,
               help="Port for the Streamlit web UI.")
 def serve(port: int) -> None:

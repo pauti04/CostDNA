@@ -29,8 +29,9 @@ def main() -> None:
 
     st.title("CostDNA")
     st.caption(
-        "Behavioral + semantic GNN attribution for AWS resources. "
-        "Upload a saved scan or run the synthetic demo to explore predictions."
+        "Natural-language agent for AWS cost attribution. "
+        "Upload a saved scan or run the synthetic demo, then explore via the "
+        "predictions browser or chat with the agent."
     )
 
     with st.sidebar:
@@ -106,6 +107,112 @@ def main() -> None:
             "Easiest: \"Run synthetic now\" → click the button.",
         )
         return
+
+    # Stash everything the chat tab needs.
+    st.session_state["predictions"] = df
+    st.session_state["signals"] = signals
+    st.session_state["metadata"] = metadata
+
+    # ── Two-tab layout: Browse predictions / Chat with agent ─────────────
+    tab_browse, tab_chat = st.tabs(["📊 Browse predictions", "💬 Chat with the agent"])
+
+    with tab_chat:
+        _render_chat_tab(df, signals, metadata)
+
+    with tab_browse:
+        _render_browse_tab(df, signals, metadata)
+
+
+def _render_chat_tab(df, signals, metadata) -> None:
+    """Conversational interface to the CostDNA agent."""
+    st.subheader("Chat with the CostDNA agent")
+    st.caption(
+        "The agent has access to 9 tools that query this scan. Ask anything: "
+        "*'why did our bill spike Tuesday?'*, *'top 5 spenders on team ml'*, "
+        "*'which resources don't fit any team?'*"
+    )
+
+    api_key = st.text_input(
+        "ANTHROPIC_API_KEY",
+        type="password",
+        help="Required to talk to Claude. Stays in your browser session — "
+             "never logged. Get one at console.anthropic.com.",
+    )
+
+    # Build the agent context once per scan.
+    if "agent_ctx" not in st.session_state:
+        from costdna.agent import CostDnaContext
+        teams = tuple(sorted(df["team_pred"].dropna().unique()))
+        st.session_state["agent_ctx"] = CostDnaContext(
+            predictions=df,
+            signals=signals if signals is not None else __import__("pandas").DataFrame(),
+            deploys=None,
+            metadata=metadata if metadata is not None else df,
+            teams=teams,
+        )
+
+    # Conversation history.
+    if "chat_messages" not in st.session_state:
+        st.session_state["chat_messages"] = []
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = None
+
+    # Replay messages.
+    for m in st.session_state["chat_messages"]:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
+
+    # Suggested first questions.
+    if not st.session_state["chat_messages"]:
+        st.markdown("**Suggested questions:**")
+        cols = st.columns(2)
+        suggestions = [
+            "Summarize this account.",
+            "Which 5 resources are racking up the most spend?",
+            "Find the largest cost spikes and explain them.",
+            "Which resources don't fit any team?",
+        ]
+        for i, s in enumerate(suggestions):
+            if cols[i % 2].button(s, key=f"suggest_{i}"):
+                st.session_state["pending_q"] = s
+                st.rerun()
+
+    # Input.
+    q = st.chat_input("Ask anything about this scan…")
+    if "pending_q" in st.session_state:
+        q = st.session_state.pop("pending_q")
+
+    if q:
+        if not api_key:
+            st.error("Paste your ANTHROPIC_API_KEY above first.")
+            return
+        st.session_state["chat_messages"].append({"role": "user", "content": q})
+        with st.chat_message("user"):
+            st.markdown(q)
+        with st.chat_message("assistant"):
+            with st.spinner("thinking…"):
+                from costdna.agent import ask as agent_ask
+                try:
+                    reply = agent_ask(
+                        q, st.session_state["agent_ctx"],
+                        api_key=api_key,
+                        history=st.session_state["chat_history"],
+                    )
+                except Exception as e:
+                    err = f"Agent error: `{type(e).__name__}: {e}`"
+                    st.error(err)
+                    return
+            st.markdown(reply.answer)
+            with st.expander(f"🔧 {len(reply.tool_calls)} tool calls"):
+                for tc in reply.tool_calls:
+                    st.code(f"{tc['tool']}({tc['args']})", language="python")
+        st.session_state["chat_messages"].append(
+            {"role": "assistant", "content": reply.answer}
+        )
+        st.session_state["chat_history"] = reply.history
+
+
+def _render_browse_tab(df, signals, metadata) -> None:
 
     # ---- Top-level metrics ----
     cols = st.columns(4)
