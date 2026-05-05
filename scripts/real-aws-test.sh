@@ -95,6 +95,37 @@ cd "$REPO_ROOT/terraform"
 terraform init -upgrade
 terraform apply -auto-approve -var "region=$AWS_REGION"
 
+# Grant the calling IAM user permission to AssumeRole into each team role
+# (the resource trust policy allows this, but the user also needs the
+# matching identity policy). This is a no-op if already attached.
+echo "  → granting sts:AssumeRole on team roles to the current IAM user"
+ACCT=$(aws sts get-caller-identity --query Account --output text)
+CALLER_ARN=$(aws sts get-caller-identity --query Arn --output text)
+if [[ "$CALLER_ARN" == *":user/"* ]]; then
+  USER_NAME="${CALLER_ARN##*/}"
+  POLICY_DOC=$(cat <<JSON
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "sts:AssumeRole",
+    "Resource": [
+      "arn:aws:iam::${ACCT}:role/backend-svc-role",
+      "arn:aws:iam::${ACCT}:role/data-pipeline-role",
+      "arn:aws:iam::${ACCT}:role/ml-training-role"
+    ]
+  }]
+}
+JSON
+)
+  aws iam put-user-policy \
+    --user-name "$USER_NAME" \
+    --policy-name AssumeTeamRoles \
+    --policy-document "$POLICY_DOC"
+else
+  echo "  caller is a role, not a user — assuming AssumeRole is already permitted"
+fi
+
 # ---------- 4. Start the simulators ----------
 echo
 echo "▸ [4/4] starting simulators (run_scheduled.py — gives each team a"
@@ -102,9 +133,11 @@ echo "         distinct time-of-day fingerprint)"
 cd "$REPO_ROOT"
 mkdir -p simulation/logs
 
-nohup python -m simulation.run_scheduled \
-  --aws-profile "$AWS_PROFILE" \
-  --region "$AWS_REGION" \
+# run_scheduled.py picks up AWS creds from AWS_PROFILE / AWS_DEFAULT_REGION
+# env vars (already exported above). Default Terraform creates 3 teams
+# (backend, data, ml) — pass --teams to match. If you've added platform to
+# terraform/variables.tf, drop the flag or extend the list.
+nohup python -m simulation.run_scheduled --teams backend,data,ml \
   > simulation/logs/scheduled.log 2>&1 &
 
 SIM_PID=$!
