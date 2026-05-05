@@ -261,8 +261,16 @@ def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
     if "team" in pred_df.columns:
         pred_df = pred_df.rename(columns={"team": "team_truth"})
 
-    # Headline output first — what a non-ML user actually wants.
+    # Per-resource "why" — naming-signal hints for each prediction. Operator-readable.
+    from costdna.semantic import extract_signal_explanations
     pred_team_names = [_idx(int(p)) for p in result.predictions]
+    expl_df = extract_signal_explanations(
+        metadata.set_index("resource_id").reindex(data.node_ids).reset_index(),
+        pred_team_names,
+    )
+    pred_df = pred_df.merge(expl_df, on="resource_id", how="left")
+
+    # Headline output first — what a non-ML user actually wants.
     summary = build_summary(pred_team_names, result.confidences,
                             data.node_ids, signals, metadata)
     render_executive_summary(summary, console=console)

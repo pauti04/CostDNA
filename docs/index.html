@@ -389,8 +389,14 @@ footer a:hover { text-decoration: underline; }
     <p class="lead">No AWS account needed for the synthetic demo. Real-cloud paths require ~30 min of setup.</p>
 
     <div class="card">
-      <h3>30-second synthetic demo</h3>
-      <pre><span class="prompt">$</span> git clone https://github.com/pauti04/costdna && cd costdna
+      <h3>30-second demo (no install)</h3>
+      <pre><span class="prompt">$</span> docker run --rm pauti04/costdna scan --synthetic --epochs 50</pre>
+      <p style="color: var(--text-soft); margin-top: 8px; margin-bottom: 0;">Pulls a prebuilt multi-arch image (~2GB) with all dependencies and the embedding model baked in.</p>
+    </div>
+
+    <div class="card">
+      <h3>From source (for hacking)</h3>
+      <pre><span class="prompt">$</span> git clone https://github.com/pauti04/CostDNA && cd CostDNA
 <span class="prompt">$</span> pip install -e .
 <span class="prompt">$</span> costdna scan --synthetic --show-kind</pre>
     </div>

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "costdna"
-version = "0.1.0"
-description = "Behavioral fingerprinting for AWS cost attribution. Tells you which team owns every resource — even untagged ones."
+version = "0.2.0"
+description = "Semantic + behavioral GNN for AWS cost attribution. Infers which team owns each AWS resource — even untagged ones — and writes the tags back."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -21,9 +21,12 @@ dependencies = [
     "torch>=2.2",
     "torch-geometric>=2.5",
     "statsmodels>=0.14",
+    "sentence-transformers>=2.5",   # semantic feature extraction
 ]
 
 [project.optional-dependencies]
+viz = ["matplotlib>=3.8", "umap-learn>=0.5"]
+ui  = ["streamlit>=1.32"]
 dev = ["pytest>=8.0", "ruff>=0.4"]
 
 [project.scripts]

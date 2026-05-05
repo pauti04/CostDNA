@@ -237,10 +237,24 @@ cd terraform && terraform init && terraform apply
 costdna scan --aws-profile dev --save-dir runs/first
 ```
 
-### Docker
+### Docker (no install required)
+
+The fastest way to try CostDNA — pulls a prebuilt image with all dependencies and the embedding model baked in:
+
+```bash
+# 30-second synthetic demo
+docker run --rm pauti04/costdna scan --synthetic --epochs 50
+
+# Live AWS scan (mount your AWS credentials)
+docker run --rm -v ~/.aws:/root/.aws pauti04/costdna scan --aws-profile prod
+```
+
+The image is multi-arch (linux/amd64 and linux/arm64), built from this repo via [GitHub Actions](.github/workflows/docker-release.yml) on every release tag.
+
+To build locally:
 ```bash
 docker build -t costdna .
-docker run --rm -v ~/.aws:/root/.aws costdna scan --aws-profile prod
+docker run --rm costdna scan --synthetic
 ```
 
 ## Repo layout
