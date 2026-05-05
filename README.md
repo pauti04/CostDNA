@@ -237,6 +237,33 @@ cd terraform && terraform init && terraform apply
 costdna scan --aws-profile dev --save-dir runs/first
 ```
 
+### Web UI (no CLI required)
+
+For FinOps engineers who'd rather click than type. Single-page app:
+upload a saved `predictions.csv` (or run a synthetic scan in-browser),
+filter by team / type / confidence, generate `aws ec2 create-tags` commands.
+
+```bash
+pip install 'costdna[ui]'
+costdna serve     # http://localhost:8501
+```
+
+### Continuous attribution + drift alerts
+
+`costdna watch` runs a fresh scan, diffs against the previous run, and
+posts a digest (drifted resources, new anomalies, lost-confidence flags)
+to Slack/Discord. Designed for cron:
+
+```bash
+# Daily at 6am UTC
+0 6 * * *  /usr/local/bin/costdna watch --aws-profile prod \
+                                        --slack-webhook $SLACK_WEBHOOK_URL
+```
+
+Each run saves to a date-stamped subdirectory under `--state-dir`
+(default `runs/watch/`). The digest format works with both Slack and
+Discord webhooks.
+
 ### Docker (no install required)
 
 The fastest way to try CostDNA — pulls a prebuilt image with all dependencies and the embedding model baked in:

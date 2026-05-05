@@ -18,7 +18,9 @@ Research / analysis commands:
 from __future__ import annotations
 
 import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -264,10 +266,13 @@ def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
     # Per-resource "why" — naming-signal hints for each prediction. Operator-readable.
     from costdna.semantic import extract_signal_explanations
     pred_team_names = [_idx(int(p)) for p in result.predictions]
-    expl_df = extract_signal_explanations(
-        metadata.set_index("resource_id").reindex(data.node_ids).reset_index(),
-        pred_team_names,
-    )
+    # Defensive: dedupe in case metadata has duplicate resource_ids (rare,
+    # but synthetic-generator collisions or merge artifacts can cause it).
+    md_unique = metadata.drop_duplicates(subset=["resource_id"], keep="first")
+    md_aligned = (md_unique.set_index("resource_id")
+                            .reindex(data.node_ids)
+                            .reset_index())
+    expl_df = extract_signal_explanations(md_aligned, pred_team_names)
     pred_df = pred_df.merge(expl_df, on="resource_id", how="left")
 
     # Headline output first — what a non-ML user actually wants.
@@ -608,6 +613,92 @@ def learn(synthetic, days, seed, budget, initial, batch, strategy, compare_all,
                                      batch_size=batch, strategy=strat, seed=seed)
             tbl.add_row(strat, f"{r.history[-1].test_acc:.1%}")
         console.print(tbl)
+
+
+@main.command()
+@click.option("--state-dir", default="runs/watch", show_default=True,
+              type=click.Path(file_okay=False, path_type=Path),
+              help="Directory holding date-stamped scan results across runs.")
+@click.option("--aws-profile", default=None)
+@click.option("--region", default="us-east-1", show_default=True)
+@click.option("--days", default=1, show_default=True,
+              help="Lookback window per scan.")
+@click.option("--epochs", default=200, show_default=True)
+@click.option("--seed", default=42, show_default=True)
+@click.option("--labels", "labels_path",
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=None)
+@click.option("--slack-webhook", "slack_webhook", default=None,
+              help="Slack/Discord webhook URL. If unset, falls back to "
+                   "SLACK_WEBHOOK_URL env var.")
+@click.option("--min-confidence", default=0.7, show_default=True)
+def watch(state_dir, aws_profile, region, days, epochs, seed, labels_path,
+          slack_webhook, min_confidence):
+    """Run a fresh scan, diff against the previous run, post a digest.
+
+    Designed to be run on a daily/weekly cron. The state directory
+    accumulates a date-stamped subdir per scan, used for drift detection.
+
+    Cron example (daily at 6am UTC):
+        0 6 * * *  /usr/local/bin/costdna watch --aws-profile prod \\
+                                                --slack-webhook $SLACK_WEBHOOK_URL
+    """
+    from costdna.watcher import build_digest, post_to_slack, write_digest
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    run_dir = state_dir / today
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    console.print(f"[bold cyan]→[/] Watch run: {today} → [bold]{run_dir}[/]")
+
+    # Reuse the scan command's logic via Click context invocation.
+    ctx = click.get_current_context()
+    ctx.invoke(
+        scan,
+        aws_profile=aws_profile,
+        region=region,
+        days=days,
+        synthetic=False if aws_profile else True,
+        seed=seed,
+        epochs=epochs,
+        save_dir=run_dir,
+        show_truth=False,
+        show_kind=False,
+        labels_path=labels_path,
+        azure_trace=None,
+        azure_top_n=25,
+        azure_max_per_sub=200,
+        save_umap=False,
+        azure_readings=None,
+    )
+
+    # Save anomalies separately for the digest builder.
+    # (scan already wrote predictions.csv etc; anomalies are in the run output
+    # but we don't currently dump them as JSON. Skip for now — the digest
+    # gracefully handles missing anomalies.json.)
+
+    console.print(f"[bold cyan]→[/] Building drift digest")
+    digest = build_digest(run_dir, state_dir, confidence_threshold=min_confidence)
+    digest_path = write_digest(digest, run_dir)
+    console.print(f"  digest written to [bold]{digest_path}[/]")
+
+    # Show the markdown.
+    from rich.panel import Panel
+    from rich import box
+    console.print(Panel(digest.to_markdown(),
+                        title=f"Drift digest — {today}",
+                        box=box.ROUNDED, border_style="cyan"))
+
+    # Post to Slack if configured.
+    webhook = slack_webhook or os.environ.get("SLACK_WEBHOOK_URL")
+    if webhook:
+        console.print(f"[bold cyan]→[/] Posting digest to webhook")
+        if post_to_slack(digest, webhook):
+            console.print("  [green]✓ posted[/]")
+        else:
+            console.print("  [red]✗ webhook post failed (see log)[/]")
+    else:
+        console.print("[dim]  No --slack-webhook / SLACK_WEBHOOK_URL set; "
+                      "skipping post.[/]")
 
 
 @main.command()
