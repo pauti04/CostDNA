@@ -109,9 +109,25 @@ def _prepare(signals, metadata, flows):
     return _prepare_with_teams(signals, metadata, flows, TEAMS)
 
 
-def _prepare_with_teams(signals, metadata, flows, teams: tuple[str, ...]):
+def _prepare_with_teams(signals, metadata, flows, teams: tuple[str, ...],
+                        use_semantic: bool = True):
+    """Build features (behavioral + optionally semantic), graph, and labels.
+
+    With `use_semantic=True` (default), each resource's name-like fields
+    (iam_role, resource_id, partial tags) are LLM-embedded and concatenated
+    with the 9 behavioral features. On real accounts where IAM role names
+    are semantic ("prod-data-etl-runner"), this is the dominant signal.
+    """
     features = extract_features(signals, metadata)
     features_norm = normalize_features(features)
+
+    if use_semantic and len(metadata) > 0:
+        from costdna.semantic import extract_semantic_features
+        sem = extract_semantic_features(metadata, project_to=32)
+        if not sem.empty:
+            sem_aligned = sem.reindex(features_norm.index).fillna(0.0)
+            features_norm = pd.concat([features_norm, sem_aligned], axis=1)
+
     graph = build_graph(features_norm, metadata, flows, signals)
     labels: dict[str, int] = {}
     if "team" in metadata.columns:
@@ -340,6 +356,9 @@ def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
               help="Path to Microsoft Azure Public Dataset vmtable.csv(.gz).")
 @click.option("--azure-top-n", default=25, show_default=True)
 @click.option("--azure-max-per-sub", default=200, show_default=True)
+@click.option("--azure-readings", "azure_readings",
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=None, help="Optional vm_cpu_readings file.")
 def benchmark(synthetic, aws_profile, region, days, seed, epochs, seeds, kfold,
               labels_path, from_dir, azure_trace, azure_top_n, azure_max_per_sub, azure_readings):
     """All baselines vs the GNN — multi-seed (--seeds N) or k-fold (--kfold K)."""
