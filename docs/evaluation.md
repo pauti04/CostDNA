@@ -105,6 +105,6 @@ Total commitment from your side: ~30 minutes of meeting time over the course of 
 ---
 
 **Repo**: https://github.com/pauti04/CostDNA  
-**Live demo**: https://cost-dna-parths-projects-dc857b64.vercel.app
+**Live demo**: https://cost-dna.vercel.app
 
 If anything's unclear, ping me — happy to do a 15-minute call to walk through it.

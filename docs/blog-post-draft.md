@@ -84,7 +84,7 @@ repo ml-svc) is the most likely cause (Granger p=0.000).
 
 The agent has 9 tools — `summarize_account`, `attribute_resource`, `top_spenders`, `find_cost_spikes`, `find_anomalies`, etc. The LLM (GPT-4o on the live demo, Claude in the local CLI) decides which to chain based on the question. This is the actual product — the GraphSAGE model is now an implementation detail.
 
-**Live demo: [cost-dna-parths-projects-dc857b64.vercel.app](https://cost-dna-parths-projects-dc857b64.vercel.app).** Synthetic 68-resource account. Click a suggestion, get a real answer with real dollars and resource IDs. ~$0.01/question on OpenAI's API.
+**Live demo: [cost-dna.vercel.app](https://cost-dna.vercel.app).** Synthetic 68-resource account. Click a suggestion, get a real answer with real dollars and resource IDs. ~$0.01/question on OpenAI's API.
 
 ## What I'd do differently
 

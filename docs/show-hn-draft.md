@@ -20,7 +20,7 @@ https://github.com/pauti04/CostDNA
 
 ## Body
 
-Hey HN — I built CostDNA, a natural-language agent for AWS cost attribution backed by a behavioral GraphSAGE model. Live demo: https://cost-dna-parths-projects-dc857b64.vercel.app — chat with the agent over a synthetic 68-resource account, no signup.
+Hey HN — I built CostDNA, a natural-language agent for AWS cost attribution backed by a behavioral GraphSAGE model. Live demo: https://cost-dna.vercel.app — chat with the agent over a synthetic 68-resource account, no signup.
 
 The interesting part isn't the agent. It's that I caught two label-leakage bugs in published cloud datasets while building this.
 
@@ -97,7 +97,7 @@ Hi {name},
 
 I noticed {company} is hiring for {role}. I built CostDNA as a portfolio piece — it's a natural-language agent that infers AWS resource ownership from behavioral patterns (CloudTrail / IAM / cost time-series), backed by a GraphSAGE GNN. The novel contribution is a self-audit that caught label leakage in two published cloud datasets, including Microsoft's 2.6M-VM Azure trace.
 
-Live demo: https://cost-dna-parths-projects-dc857b64.vercel.app
+Live demo: https://cost-dna.vercel.app
 Repo: https://github.com/pauti04/CostDNA
 
 Would the work be relevant to {team}? Happy to walk through the methodology if useful.
