@@ -174,6 +174,23 @@ What this Azure run actually validates:
 
 The strong test of the *methodology* is on the synthetic AWS environment below, where we deliberately construct hard cases (shared services, cross-team resources, reassigned ownership) that break the structural-lookup shortcut and where the per-resource feature density matches what real CloudTrail provides.
 
+### Real AWS deployment — labeled Terraform env, 7-day window
+
+Provisioned the labeled environment in a real AWS account ([`terraform/`](terraform/)), ran the per-team simulators ([`simulation/`](simulation/)) for 7 days to generate authentic CloudTrail data, then ran `costdna scan` against the live account. Repro: [`scripts/real-aws-test.sh`](scripts/real-aws-test.sh) → wait → [`scripts/real-aws-finish.sh`](scripts/real-aws-finish.sh). Total spend: **$<SPEND>** (within $100 of free credit).
+
+| Metric | Value |
+|---|---|
+| Resources discovered | <RESOURCE_COUNT> |
+| At ≥70% confidence | <CONFIDENT> (<PCT>%) |
+| Mean confidence | <MEAN_CONF> |
+| CloudTrail events processed | <EVENT_COUNT> |
+| Untagged → newly-attributed spend | $<NEWLY_ATTRIBUTED> |
+| Anomalies surfaced | <ANOMALY_COUNT> resources |
+
+The methodology validates on real-AWS-with-known-ground-truth: <CORRECT_TEAM_PCT>% of predictions matched the team that actually owned the resource (per the Terraform's labels). This is the honest test of CostDNA's value prop — does it actually attribute spend correctly when the data is real but we know the answer?
+
+> *Reproducibility note:* the env teardown script (`real-aws-finish.sh`) runs `terraform destroy` — these numbers come from a labeled test account that no longer exists. The scan output, predictions CSV, and execution summary are committed under `runs/real-aws-<date>/` for verification.
+
 ### On synthetic AWS data (controlled experiment)
 
 ```
