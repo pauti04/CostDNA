@@ -611,6 +611,35 @@ def learn(synthetic, days, seed, budget, initial, batch, strategy, compare_all,
 
 
 @main.command()
+@click.option("--port", default=8501, show_default=True,
+              help="Port for the Streamlit web UI.")
+def serve(port: int) -> None:
+    """Launch the CostDNA web UI (Streamlit).
+
+    Real users — FinOps engineers, platform leads — don't want a CLI. They
+    want to look at predictions, filter, click "approve", and export the
+    apply commands. That's what `costdna serve` does.
+    """
+    try:
+        import streamlit  # noqa: F401
+    except ImportError:
+        console.print("[red]Streamlit isn't installed.[/]")
+        console.print("  Install the optional UI dependency:  "
+                      "[bold]pip install 'costdna[ui]'[/]")
+        sys.exit(1)
+    import subprocess
+    from pathlib import Path as _P
+    webapp = _P(__file__).parent / "webapp.py"
+    console.print(f"[bold cyan]→[/] Launching CostDNA web UI on "
+                  f"[bold]http://localhost:{port}[/]")
+    subprocess.run([
+        "streamlit", "run", str(webapp),
+        "--server.port", str(port),
+        "--server.headless", "true",
+    ])
+
+
+@main.command()
 @click.option("--aws-profile", default=None)
 @click.option("--region", default="us-east-1")
 @click.option("--days", default=14)
