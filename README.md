@@ -2,7 +2,9 @@
 
 **A natural-language agent for AWS cost attribution.** Ask it questions about your cloud bill in English; it answers with specific resources, teams, dollar amounts, and timestamps — backed by a behavioral GraphSAGE model + LLM-derived semantic features over CloudTrail / IAM / Cost Explorer.
 
-> **▶ Live demo: [cost-dna.vercel.app](https://cost-dna.vercel.app)** — chat with the agent over a synthetic 68-resource AWS account. No setup, runs on GPT-4o.
+> **▶ Live demo: [cost-dna-parths-projects-dc857b64.vercel.app](https://cost-dna-parths-projects-dc857b64.vercel.app)** — chat with the agent over a synthetic 68-resource AWS account. No setup, runs on GPT-4o.
+
+![CostDNA live demo — chat agent answering with real per-team spend](docs/images/live-demo.png)
 
 ```bash
 $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
@@ -17,7 +19,7 @@ $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
 ╰────────────────────────────────────────────────────────────────────────╯
 ```
 
-The agent has **9 tools** available — the LLM (GPT-4o on the [live demo](https://cost-dna.vercel.app), Claude in the local Python CLI; backend is pluggable) chains them to answer questions like:
+The agent has **9 tools** available — the LLM (GPT-4o on the [live demo](https://cost-dna-parths-projects-dc857b64.vercel.app), Claude in the local Python CLI; backend is pluggable) chains them to answer questions like:
 
 - *"Which 5 resources are racking up the most spend?"* → `top_spenders`
 - *"What does `i-9f8e7d` belong to?"* → `attribute_resource`
@@ -44,7 +46,7 @@ costdna serve   # then open the "💬 Chat with the agent" tab
 
 Setup: `pip install 'costdna[agent]'` + `export ANTHROPIC_API_KEY=...`.
 
-> **[cost-dna.vercel.app](https://cost-dna.vercel.app)** — full landing page with the live agent, methodology, charts, and audit narrative.
+> **[cost-dna-parths-projects-dc857b64.vercel.app](https://cost-dna-parths-projects-dc857b64.vercel.app)** — full landing page with the live agent, methodology, charts, and audit narrative.
 
 ![GraphSAGE embedding — 4 teams + unowned cluster, automatically separated](docs/images/umap-synthetic.png)
 
