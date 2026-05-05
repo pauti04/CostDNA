@@ -29,6 +29,17 @@ AWS_REGION=${AWS_REGION:-us-east-1}
 export AWS_DEFAULT_REGION=$AWS_REGION
 
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+
+# Make sure the costdna CLI is installed before we go further (the script
+# uses `costdna doctor` and `costdna scan`).
+if ! command -v costdna >/dev/null 2>&1; then
+  echo "  costdna CLI not on PATH. Installing editable from $REPO_ROOT…"
+  (cd "$REPO_ROOT" && pip install -e ".[agent]" >/dev/null 2>&1) || {
+    echo "  pip install failed. Run manually: cd $REPO_ROOT && pip install -e .[agent]"
+    exit 1
+  }
+fi
+
 echo
 echo "→ profile:  $AWS_PROFILE"
 echo "→ region:   $AWS_REGION"
