@@ -225,8 +225,9 @@ export default function Home() {
       {/* ────────── TOOLS ────────── */}
       <Section number="03" title="9 tools the agent chains" id="tools">
         <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-8">
-          Each tool wraps a piece of the underlying CostDNA pipeline. Claude
-          (or any tool-using LLM) decides which to call based on the question.
+          Each tool wraps a piece of the underlying CostDNA pipeline. The agent
+          (GPT-4o on the live demo, Claude in the Python CLI — backend is
+          pluggable) decides which to call based on the question.
         </p>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -348,7 +349,7 @@ $ costdna serve
             ["Python 3.11", "pandas, numpy, scikit-learn, statsmodels, networkx"],
             ["PyTorch 2.x + PyTorch Geometric", "GraphSAGE classifier — 4 layers, residual, hidden_dim 16"],
             ["sentence-transformers", "MiniLM embeddings of IAM role names + resource IDs + tags"],
-            ["Anthropic SDK", "Tool-using agent loop over the 9 CostDNA tools"],
+            ["OpenAI + Anthropic SDKs", "Tool-using agent loop over the 9 CostDNA tools — GPT-4o on the live demo, Claude in the local CLI"],
             ["boto3 (hardened)", "Adaptive retry, throttle-aware CloudTrail lookup_events"],
             ["Streamlit + Click + Rich", "CLI commands and the interactive chat UI"],
             ["Terraform", "4-team labeled AWS env with CloudTrail data events + VPC Flow Logs"],
