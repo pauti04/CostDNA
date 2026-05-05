@@ -632,8 +632,10 @@ def serve(port: int) -> None:
     webapp = _P(__file__).parent / "webapp.py"
     console.print(f"[bold cyan]→[/] Launching CostDNA web UI on "
                   f"[bold]http://localhost:{port}[/]")
+    # Use `sys.executable -m streamlit` so we always run the streamlit that
+    # belongs to the same venv as costdna — independent of PATH.
     subprocess.run([
-        "streamlit", "run", str(webapp),
+        sys.executable, "-m", "streamlit", "run", str(webapp),
         "--server.port", str(port),
         "--server.headless", "true",
     ])
