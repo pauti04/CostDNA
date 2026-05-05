@@ -1,7 +1,7 @@
 import Image from "next/image";
 import CodeBlock from "@/components/CodeBlock";
 import FadeIn from "@/components/FadeIn";
-import AskDemo from "@/components/AskDemo";
+import AskLive from "@/components/AskLive";
 
 const GH_URL = "https://github.com/pauti04/CostDNA";
 
@@ -76,7 +76,7 @@ export default function Home() {
 
           {/* Live demo */}
           <FadeIn delay={0.28} className="mt-14">
-            <AskDemo />
+            <AskLive />
           </FadeIn>
 
           {/* KPI strip */}
