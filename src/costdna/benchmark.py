@@ -138,12 +138,21 @@ def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed
     )
     opt = torch.optim.AdamW(model.parameters(), lr=0.01, weight_decay=weight_decay)
 
+    # Class-weighted loss for stratified-split fairness on small data.
+    train_y = data.y[train_mask].cpu().numpy()
+    cls_counts = np.bincount(train_y, minlength=n_classes).astype(np.float32)
+    cls_counts = np.where(cls_counts == 0, 1.0, cls_counts)
+    cls_weights = torch.tensor(
+        cls_counts.mean() / cls_counts, dtype=torch.float32
+    )
+
     plateau = 0
     for ep in range(epochs):
         model.train()
         opt.zero_grad()
         logits, _ = model(data.x, data.edge_index)
-        loss = F.cross_entropy(logits[train_mask], data.y[train_mask])
+        loss = F.cross_entropy(logits[train_mask], data.y[train_mask],
+                               weight=cls_weights)
         loss.backward()
         opt.step()
         # Early stop on small data.

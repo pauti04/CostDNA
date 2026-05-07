@@ -108,11 +108,23 @@ def train_model(
     best_train_acc = 0.0
     plateau_count = 0
 
+    # Class-weighted loss: when stratified-split leaves any class with very
+    # few training samples, weight rare classes higher so the model doesn't
+    # learn to ignore them. Inverse frequency, normalized to mean=1.
+    train_y = data.y[train_mask].cpu().numpy()
+    cls_counts = np.bincount(train_y, minlength=n_classes).astype(np.float32)
+    cls_counts = np.where(cls_counts == 0, 1.0, cls_counts)  # avoid div-by-0
+    inv_freq = (cls_counts.mean() / cls_counts)
+    cls_weights = torch.tensor(inv_freq, dtype=torch.float32, device=data.x.device)
+    if verbose and n_labeled < 30:
+        print(f"  class weights: {dict(zip(range(n_classes), inv_freq.round(2).tolist()))}")
+
     for epoch in range(1, epochs + 1):
         model.train()
         opt.zero_grad()
         logits, emb = model(data.x, data.edge_index)
-        ce = F.cross_entropy(logits[train_mask], data.y[train_mask])
+        ce = F.cross_entropy(logits[train_mask], data.y[train_mask],
+                             weight=cls_weights)
         cont = supervised_contrastive_loss(emb, data.y, train_mask)
         loss = ce + contrastive_weight * cont
         loss.backward()
