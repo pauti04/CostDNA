@@ -85,8 +85,11 @@ resource "aws_security_group" "simulator" {
   }
 }
 
-# user_data: install python+git, clone the repo, install costdna, write a
-# systemd unit that runs the scheduled simulator with auto-restart.
+# user_data: install python+git, clone the repo, install ONLY the
+# simulator's runtime deps (boto3) — not the full project, which pulls
+# torch + torch-geometric and OOMs on a 1GB t3.micro. The simulator
+# only needs boto3 + the simulation/ folder. Then write a systemd unit
+# that runs the scheduled simulator with auto-restart.
 locals {
   simulator_user_data = <<-USERDATA
     #!/bin/bash
@@ -98,7 +101,8 @@ locals {
       cd /home/ec2-user
       git clone https://github.com/pauti04/CostDNA.git costdna
       cd costdna
-      python3.11 -m pip install --user -e .
+      # Slim install — only what the simulators import.
+      python3.11 -m pip install --user boto3
     '
 
     cat > /etc/systemd/system/costdna-sim.service <<EOF
@@ -112,8 +116,9 @@ locals {
     User=ec2-user
     WorkingDirectory=/home/ec2-user/costdna
     Environment=AWS_DEFAULT_REGION=${var.region}
+    Environment=PYTHONPATH=/home/ec2-user/costdna
     Environment=PATH=/home/ec2-user/.local/bin:/usr/local/bin:/usr/bin:/bin
-    ExecStart=/home/ec2-user/.local/bin/python3.11 -m simulation.run_scheduled --teams backend,data,ml --tz UTC
+    ExecStart=/usr/bin/python3.11 -m simulation.run_scheduled --teams backend,data,ml --tz UTC
     StandardOutput=append:/home/ec2-user/sim.log
     StandardError=append:/home/ec2-user/sim.log
     Restart=always
@@ -125,6 +130,36 @@ locals {
 
     systemctl daemon-reload
     systemctl enable --now costdna-sim
+
+    # Add an auto-update timer that pulls latest code every 30 min and
+    # restarts the sim. Lets us iterate on workload code without
+    # tearing down the EC2.
+    cat > /etc/systemd/system/costdna-sim-update.service <<EOF
+    [Unit]
+    Description=Pull latest CostDNA code and restart simulator
+
+    [Service]
+    Type=oneshot
+    User=ec2-user
+    WorkingDirectory=/home/ec2-user/costdna
+    ExecStart=/usr/bin/git pull origin main
+    ExecStartPost=/bin/systemctl restart costdna-sim
+    EOF
+
+    cat > /etc/systemd/system/costdna-sim-update.timer <<EOF
+    [Unit]
+    Description=Pull CostDNA every 30 min
+
+    [Timer]
+    OnBootSec=10min
+    OnUnitActiveSec=30min
+
+    [Install]
+    WantedBy=timers.target
+    EOF
+
+    systemctl daemon-reload
+    systemctl enable --now costdna-sim-update.timer
   USERDATA
 }
 
