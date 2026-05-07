@@ -2,6 +2,14 @@
 
 A 1-day plan: `terraform apply` in the morning, `costdna scan` against real AWS data by evening. Total active time ~3 hours, total wall-clock ~12 hours.
 
+> **TL;DR — the two-command path:**
+> ```bash
+> bash scripts/real-aws-test.sh    # day 0: stand up env + start simulator on EC2
+> # ...wait 2-7 days for CloudTrail signal to accumulate...
+> bash scripts/real-aws-finish.sh  # day N: scan, save, terraform destroy
+> ```
+> The wrappers handle preflight, $50 budget alarm, terraform, IAM permissions, the 24/7 EC2 simulator, and teardown. The hour-by-hour walkthrough below explains what's happening under the hood — read it once if you want to know what each step does, or skip straight to the wrappers.
+
 ## Prerequisites
 
 - AWS account (free tier is fine — total spend ~$3-10 for the demo)

@@ -1,5 +1,11 @@
 # CostDNA
 
+[![tests](https://github.com/pauti04/CostDNA/actions/workflows/test.yml/badge.svg)](https://github.com/pauti04/CostDNA/actions/workflows/test.yml)
+[![docker](https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml/badge.svg)](https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml)
+[![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![live demo](https://img.shields.io/badge/live%20demo-cost--dna.vercel.app-orange)](https://cost-dna.vercel.app)
+
 **A natural-language agent for AWS cost attribution.** Ask it questions about your cloud bill in English; it answers with specific resources, teams, dollar amounts, and timestamps — backed by a behavioral GraphSAGE model + LLM-derived semantic features over CloudTrail / IAM / Cost Explorer.
 
 > **▶ Live demo: [cost-dna.vercel.app](https://cost-dna.vercel.app)** — chat with the agent over a synthetic 68-resource AWS account. No setup, runs on GPT-4o.
@@ -87,6 +93,64 @@ $ costdna apply --predictions runs/today/predictions.csv --apply
    ├─ costdna learn       ─ confirm low-confidence guesses (active learning)
    ├─ costdna apply       ─ write tags back to AWS
    └─ costdna diff        ─ weekly drift check (cron)
+```
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph AWS["Your AWS account (read-only)"]
+    CT[CloudTrail<br/>events]
+    IAM[IAM roles<br/>+ users]
+    VPC[VPC flow logs]
+    CE[Cost Explorer<br/>aggregates]
+    META[Resource<br/>metadata]
+  end
+
+  subgraph collect["Collectors (boto3, hardened)"]
+    SCAN[costdna scan]
+  end
+
+  subgraph features["Feature extraction"]
+    BEHAV[Behavioral features<br/>peak_hour, weekend_ratio,<br/>cost_slope, unique_users…]
+    SEMANTIC[LLM-derived semantic features<br/>sentence-transformers MiniLM<br/>over IAM role names + IDs]
+    GRAPH[Graph: VPC + IAM + flow edges]
+  end
+
+  subgraph model["GraphSAGE classifier"]
+    GNN[4-layer residual GraphSAGE<br/>+ supervised contrastive head]
+    PRED[predictions.csv<br/>resource_id → team + confidence]
+  end
+
+  subgraph agent["LLM agent (9 callable tools)"]
+    A[summarize_account<br/>top_spenders<br/>find_cost_spikes<br/>find_anomalies<br/>attribute_resource<br/>...]
+  end
+
+  subgraph downstream["Downstream"]
+    TAGS[AWS tags<br/>via costdna apply]
+    DASH[Existing FinOps dashboard<br/>CloudHealth / Vantage / etc.]
+    CHAT[Natural-language chat<br/>cost-dna.vercel.app]
+  end
+
+  CT --> SCAN
+  IAM --> SCAN
+  VPC --> SCAN
+  CE --> SCAN
+  META --> SCAN
+
+  SCAN --> BEHAV
+  SCAN --> SEMANTIC
+  SCAN --> GRAPH
+
+  BEHAV --> GNN
+  SEMANTIC --> GNN
+  GRAPH --> GNN
+  GNN --> PRED
+
+  PRED --> A
+  PRED --> TAGS
+  TAGS --> DASH
+  A --> CHAT
 ```
 
 ## Visual proof — embedding space
@@ -257,15 +321,26 @@ When the model says 0.7, it's right 70% of the time. That makes the confidence c
 
 ## Comparison to existing tools
 
-| Tool | What it does | What it can't do |
-|---|---|---|
-| **AWS Cost Categories** | Rules-based ("if name matches `*ml*` → team:ml") | Doesn't infer behavior; you write the rules manually |
-| **AWS Cost Allocation Tags** | Aggregates spend by tag | Useless for the 40-60% of resources nobody tagged |
-| **Kubecost** | k8s-only — pod-level cost attribution | Doesn't see Lambda, RDS, S3, EC2 outside k8s |
-| **CloudHealth / Vantage / Apptio** | Multi-cloud, dashboards, allocation rules | All tag-based or rules-based — same blind spot for untagged |
-| **CostDNA** | Infers ownership from behavior; writes tags back | Needs CloudTrail + Flow Logs (which most prod accounts have) |
+| Tool | Attribution mechanism | Scope (typical AWS account) | Untagged-resource handling |
+|---|---|---|---|
+| **AWS Cost Allocation Tags** | Reads existing tags | Tagged resources only — **40-60% of spend on most accounts** | Nothing. Resources without tags are aggregated under "untagged". |
+| **AWS Cost Categories** | Rules you write manually (regex on resource name / arn) | Whatever your rules cover | Manual: you write a rule per-pattern, per-team. Doesn't infer. |
+| **Kubecost** | k8s pod / namespace metadata | Containerized workloads only — **Lambda, RDS, S3, plain EC2 invisible** | Out of scope. |
+| **CloudHealth / Vantage / Apptio** | Tags + manual allocation rules | Tagged resources + rule-matched | Tag-based blind spot inherited; rules require maintenance. |
+| **CostDNA** | Behavioral fingerprints (CloudTrail + IAM + VPC flow + cost shape) → GraphSAGE GNN | All AWS resources that emit CloudTrail | **Inferred** with calibrated confidence (ECE = 0.001). Writes tags back so downstream tools see them. |
 
-**Positioning:** CostDNA isn't a dashboard. It's the missing input layer that makes every other FinOps tool work on previously-unattributable resources. Run `costdna apply`, then your existing dashboard suddenly explains 90% of spend instead of 50%.
+**Quantitative comparison on the synthetic 4-team / 68-resource env** (5-seed mean accuracy on hard cases):
+
+| Method | Clean | Cross-team | Reassigned | Shared-services | Sparse |
+|---|---:|---:|---:|---:|---:|
+| Tag-based (CloudHealth, Vantage, etc.) ¹ | 100% | 0% | 0% | 0% | 0% |
+| LogReg (feature-only) | 99% | **0%** | 60% | 60% | 100% |
+| LabelProp (graph-aware) | 100% | 40% | 100% | 100% | 100% |
+| **GraphSAGE (CostDNA)** | 97% | 40% | 100% | 100% | 100% |
+
+¹ *Tag-based tools only attribute pre-tagged resources. The synthetic env has no team tags by design — that's the regime CostDNA is built for. On a tag-complete account, every tag-based tool is already 100% by definition; the question is what fraction of resources actually have tags. CostDNA's contribution is the inferred-tags layer for the resources that don't.*
+
+**Positioning:** CostDNA isn't a dashboard — it's the missing input layer that makes every other FinOps tool work on previously-unattributable resources. Run `costdna apply`, then your existing dashboard suddenly explains 90% of spend instead of 50%.
 
 ## Quickstart
 
