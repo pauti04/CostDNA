@@ -1,0 +1,26 @@
+resource_id,team_pred,confidence,resource_type,team_truth,explanation
+i-0d128969344fa149f,backend,0.9955278,ec2,backend,iam_role contains 'backend'
+i-0ab36e76003fecdc3,data,1.0,ec2,data,iam_role contains 'data'
+i-07462d7921cb3c466,ml,0.9529005,ec2,ml,no name-based hint — relies on behavioral/graph signal
+i-0ae5ab12305f910af,ml,0.9523987,ec2,ml,no name-based hint — relies on behavioral/graph signal
+i-0c2c7a3998ab4e067,data,1.0,ec2,data,iam_role contains 'data'
+i-0d75f2c09b4453425,backend,0.9709244,ec2,backend,iam_role contains 'backend'
+i-02a24ac56fa9ecc30,ml,0.95314854,ec2,,no name-based hint — relies on behavioral/graph signal
+costdna-synth-backend,backend,0.99999976,rds,backend,resource_id contains 'backend'
+costdna-synth-data,ml,0.5451587,rds,data,no name-based hint — relies on behavioral/graph signal
+costdna-synth-ml,ml,0.9489119,rds,ml,no name-based hint — relies on behavioral/graph signal
+ml-training-fn,ml,0.9314248,lambda,ml,no name-based hint — relies on behavioral/graph signal
+billing-export-2018,data,0.64564955,lambda,,no name-based hint — relies on behavioral/graph signal
+backend-svc-fn,backend,1.0,lambda,backend,iam_role contains 'backend'; resource_id contains 'backend'
+myFunction-2,data,0.9278671,lambda,,no name-based hint — relies on behavioral/graph signal
+DatadogForwarder-63e91312,ml,0.5216229,lambda,,no name-based hint — relies on behavioral/graph signal
+test-deploy-v3,data,0.59468216,lambda,,no name-based hint — relies on behavioral/graph signal
+alice-smith-test-fn,data,0.941778,lambda,,no name-based hint — relies on behavioral/graph signal
+data-pipeline-fn,data,1.0,lambda,data,iam_role contains 'data'; resource_id contains 'data'
+alice-smith-personal-bucket-63e91312,data,0.6062225,s3,,no name-based hint — relies on behavioral/graph signal
+cloudflare-access-logs-63e91312,backend,0.9872917,s3,,no name-based hint — relies on behavioral/graph signal
+costdna-synth-backend-63e91312,backend,0.99995995,s3,backend,resource_id contains 'backend'
+costdna-synth-cloudtrail-63e91312,backend,0.8060015,s3,,no name-based hint — relies on behavioral/graph signal
+costdna-synth-data-63e91312,ml,0.89253426,s3,data,no name-based hint — relies on behavioral/graph signal
+costdna-synth-ml-63e91312,ml,0.9554843,s3,ml,no name-based hint — relies on behavioral/graph signal
+old-billing-bucket-2019-63e91312,ml,0.89808106,s3,,no name-based hint — relies on behavioral/graph signal
