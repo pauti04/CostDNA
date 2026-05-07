@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Analytics from "@/components/Analytics";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -8,21 +9,43 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", displ
 export const metadata: Metadata = {
   title: "CostDNA — Ask your AWS bill questions in English",
   description:
-    "A natural-language agent for AWS cost attribution. Combines a behavioral GraphSAGE GNN with LLM-derived semantic features and structured CloudTrail/Cost Explorer queries. Answers questions like 'why did our bill spike Tuesday?' with specific resources, teams, and dollar amounts.",
-  metadataBase: new URL("https://pauti04.github.io/CostDNA"),
+    "A natural-language agent for cloud cost attribution. Production-tested on AWS (87% per-resource accuracy on a real account), methodology validated on Microsoft's 2.6M-VM Azure trace. Multi-cloud architecture, open source.",
+  metadataBase: new URL("https://cost-dna.vercel.app"),
+  alternates: { canonical: "/" },
   openGraph: {
     title: "CostDNA — Ask your AWS bill questions in English",
     description:
-      "Natural-language AWS cost attribution agent. Built on a behavioral GNN + LLM-augmented semantic features. Open source.",
-    images: ["/images/umap-synthetic.png"],
+      "Natural-language cloud-cost agent. 87% on real AWS, +53% lift over best baseline, multi-cloud architecture. Open source.",
+    images: [
+      {
+        url: "/images/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "CostDNA — Ask your AWS bill questions in English",
+      },
+    ],
     type: "website",
+    url: "https://cost-dna.vercel.app",
+    siteName: "CostDNA",
   },
   twitter: {
     card: "summary_large_image",
     title: "CostDNA — Ask your AWS bill questions in English",
-    description: "Natural-language AWS cost attribution agent. Open source.",
-    images: ["/images/umap-synthetic.png"],
+    description: "Natural-language cloud-cost agent. 87% on real AWS. Open source.",
+    images: ["/images/og-card.png"],
   },
+  keywords: [
+    "AWS cost attribution",
+    "FinOps",
+    "GraphSAGE",
+    "Graph Neural Network",
+    "CloudTrail",
+    "cost allocation",
+    "cloud tagging",
+    "Cost Explorer",
+    "natural language agent",
+    "LLM",
+  ],
 };
 
 export default function RootLayout({
@@ -31,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body className="bg-bg text-text antialiased font-sans">
+        <Analytics />
         {children}
       </body>
     </html>

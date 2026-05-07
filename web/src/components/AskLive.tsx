@@ -40,6 +40,17 @@ export default function AskLive() {
     const placeholder: Turn = { question, answer: "" };
     setTurns((t) => [...t, placeholder]);
 
+    // Analytics — no-op if PostHog isn't configured.
+    type TrackFn = (event: string, props?: object) => void;
+    const track = (
+      window as unknown as { costdnaTrack?: TrackFn }
+    ).costdnaTrack;
+    track?.("question_submitted", {
+      question_length: question.length,
+      turn_index: turns.length,
+    });
+    const t0 = performance.now();
+
     try {
       const r = await fetch("/api/ask", {
         method: "POST",
@@ -48,6 +59,7 @@ export default function AskLive() {
       });
       const data = await r.json();
       if (!r.ok) {
+        track?.("question_failed", { status: r.status, error: data.error });
         setTurns((t) => {
           const last = { ...t[t.length - 1], error: data.error || "request failed" };
           return [...t.slice(0, -1), last];
@@ -63,9 +75,16 @@ export default function AskLive() {
         };
         return [...t.slice(0, -1), last];
       });
-    } catch (err: any) {
+      track?.("answer_received", {
+        latency_ms: Math.round(performance.now() - t0),
+        n_tool_calls: (data.tool_calls || []).length,
+        answer_length: (data.answer || "").length,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "network error";
+      track?.("question_failed", { error: msg, network: true });
       setTurns((t) => {
-        const last = { ...t[t.length - 1], error: err.message ?? "network error" };
+        const last = { ...t[t.length - 1], error: msg };
         return [...t.slice(0, -1), last];
       });
     } finally {

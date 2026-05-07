@@ -1,16 +1,35 @@
-# CostDNA
+<h1 align="center">CostDNA</h1>
 
-[![tests](https://github.com/pauti04/CostDNA/actions/workflows/test.yml/badge.svg)](https://github.com/pauti04/CostDNA/actions/workflows/test.yml)
-[![docker](https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml/badge.svg)](https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml)
-[![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![live demo](https://img.shields.io/badge/live%20demo-cost--dna.vercel.app-orange)](https://cost-dna.vercel.app)
+<p align="center">
+  <b>Ask your AWS bill questions. In English.</b><br/>
+  A natural-language agent for cloud cost attribution, backed by a Graph Neural Network<br/>that infers resource ownership from CloudTrail, IAM, and cost behaviour.
+</p>
 
-**A natural-language agent for AWS cost attribution.** Ask it questions about your cloud bill in English; it answers with specific resources, teams, dollar amounts, and timestamps — backed by a behavioral GraphSAGE model + LLM-derived semantic features over CloudTrail / IAM / Cost Explorer.
+<p align="center">
+  <a href="https://cost-dna.vercel.app"><b>▶ Live demo</b></a> ·
+  <a href="#real-aws-deployment--labeled-terraform-env-3-day-window">87% on real AWS</a> ·
+  <a href="#the-audit-story">The audit story</a> ·
+  <a href="https://github.com/pauti04/CostDNA">GitHub</a>
+</p>
 
-> **▶ Live demo: [cost-dna.vercel.app](https://cost-dna.vercel.app)** — chat with the agent over a synthetic 68-resource AWS account. No setup, runs on GPT-4o.
+<p align="center">
+  <a href="https://github.com/pauti04/CostDNA/actions/workflows/test.yml"><img alt="tests" src="https://github.com/pauti04/CostDNA/actions/workflows/test.yml/badge.svg"></a>
+  <a href="https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml"><img alt="docker" src="https://github.com/pauti04/CostDNA/actions/workflows/docker-release.yml/badge.svg"></a>
+  <a href="https://www.python.org"><img alt="python" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-green"></a>
+  <a href="https://cost-dna.vercel.app"><img alt="live demo" src="https://img.shields.io/badge/live%20demo-cost--dna.vercel.app-black"></a>
+</p>
 
 ![CostDNA live demo — multi-turn chat with the agent answering using real tool calls](docs/images/live-demo.gif)
+
+<table>
+<tr>
+<td align="center" width="25%"><b>13 / 15</b><br/><sub>Real-AWS attribution accuracy (87%)</sub></td>
+<td align="center" width="25%"><b>+53%</b><br/><sub>Lift over best baseline (k-fold CV)</sub></td>
+<td align="center" width="25%"><b>2.6M</b><br/><sub>VMs in audited Microsoft dataset</sub></td>
+<td align="center" width="25%"><b>3 clouds</b><br/><sub>AWS · Azure · GCP collectors</sub></td>
+</tr>
+</table>
 
 ### Cloud support
 
