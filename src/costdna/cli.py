@@ -676,7 +676,7 @@ def watch(state_dir, aws_profile, region, days, epochs, seed, labels_path,
     # but we don't currently dump them as JSON. Skip for now — the digest
     # gracefully handles missing anomalies.json.)
 
-    console.print(f"[bold cyan]→[/] Building drift digest")
+    console.print("[bold cyan]→[/] Building drift digest")
     digest = build_digest(run_dir, state_dir, confidence_threshold=min_confidence)
     digest_path = write_digest(digest, run_dir)
     console.print(f"  digest written to [bold]{digest_path}[/]")
@@ -691,7 +691,7 @@ def watch(state_dir, aws_profile, region, days, epochs, seed, labels_path,
     # Post to Slack if configured.
     webhook = slack_webhook or os.environ.get("SLACK_WEBHOOK_URL")
     if webhook:
-        console.print(f"[bold cyan]→[/] Posting digest to webhook")
+        console.print("[bold cyan]→[/] Posting digest to webhook")
         if post_to_slack(digest, webhook):
             console.print("  [green]✓ posted[/]")
         else:
@@ -945,7 +945,7 @@ def apply(predictions_path, min_confidence, do_apply, aws_profile, region):
             console.print(f"[dim]# conf={op.confidence:.2f}[/]  {op.cli_command}")
         if len(ops) > 50:
             console.print(f"[dim]... and {len(ops) - 50} more.[/]")
-        console.print(f"\n[bold]Run with --apply to actually write these tags.[/]")
+        console.print("\n[bold]Run with --apply to actually write these tags.[/]")
         return
 
     console.print(f"\n[bold red]LIVE MODE[/] — writing tags to "

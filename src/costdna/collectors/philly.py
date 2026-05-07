@@ -142,7 +142,7 @@ def load_philly_trace(
 
     # ---- Signals (numeric features as fake "cost" rows so feature extractor
     # picks them up). Each row carries one of the per-job features as a value.
-    rng = np.random.default_rng(seed)
+    _rng = np.random.default_rng(seed)
     rows = []
     for _, r in df.iterrows():
         # Generate one synthetic hourly cost row using submitted_time anchor.

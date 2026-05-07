@@ -15,10 +15,8 @@ from dataclasses import dataclass
 import networkx as nx
 import numpy as np
 import pandas as pd
-import torch
 
 from costdna import TEAMS
-from costdna.features import FEATURE_COLUMNS, normalize_features
 from costdna.graph import build_graph, to_pyg
 from costdna.train import train_model
 

@@ -6,8 +6,7 @@ import numpy as np
 import pytest
 
 from costdna import TEAMS
-from costdna.baselines import (majority_baseline, run_knn,
-                               run_label_propagation, run_logistic_regression)
+from costdna.baselines import (run_logistic_regression)
 from costdna.collectors import generate_synthetic_signals
 from costdna.features import FEATURE_COLUMNS, extract_features, normalize_features
 from costdna.graph import build_graph, to_pyg

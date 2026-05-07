@@ -22,7 +22,7 @@ from costdna import TEAMS
 from costdna.baselines import (BaselineResult, majority_baseline,
                                run_knn, run_label_propagation,
                                run_logistic_regression)
-from costdna.train import TrainResult, train_model
+from costdna.train import TrainResult
 
 
 @dataclass
@@ -115,7 +115,7 @@ def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed
     import torch.nn.functional as F
     from sklearn.metrics import accuracy_score, classification_report
 
-    from costdna.model import GraphSAGEClassifier, supervised_contrastive_loss
+    from costdna.model import GraphSAGEClassifier
 
     torch.manual_seed(seed)
     np.random.seed(seed)

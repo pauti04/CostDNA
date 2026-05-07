@@ -82,7 +82,7 @@ def _synthesize_hourly_readings(
     end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     avg_cpu = float(row["avg_cpu"]) if pd.notna(row["avg_cpu"]) else 10.0
     max_cpu = float(row["max_cpu"]) if pd.notna(row["max_cpu"]) else 50.0
-    p95 = float(row["p95_max_cpu"]) if pd.notna(row["p95_max_cpu"]) else 30.0
+    _p95 = float(row["p95_max_cpu"]) if pd.notna(row["p95_max_cpu"]) else 30.0
 
     # Each VM gets its own peak hour drawn from a category-specific distribution.
     # This is the latent behavioral pattern the model learns to discriminate.

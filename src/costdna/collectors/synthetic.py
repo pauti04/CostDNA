@@ -349,7 +349,7 @@ def _events_for_resource(r: dict, days: int, rng: random.Random) -> list[dict]:
     if r["team"] == "unowned":
         return _events_for_unowned(r, days, rng)
 
-    profile = PROFILES[r["team"]]
+    _profile = PROFILES[r["team"]]
     events = []
     now = datetime.now(timezone.utc)
 
