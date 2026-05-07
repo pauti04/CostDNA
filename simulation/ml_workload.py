@@ -22,6 +22,18 @@ def main() -> None:
 
     s3 = sess.client("s3")
     lam = sess.client("lambda")
+    ec2 = sess.client("ec2")
+
+    # Training jobs periodically poll the GPU/ml-instance fleet for health,
+    # leaving CloudTrail events attributed to the ml team's role on the
+    # ml team's EC2s. Distinctive bursts (3-6 polls per training cycle).
+    for inst_id in resources["ec2"]:
+        for _ in range(rng.randint(3, 6)):
+            try:
+                ec2.describe_instances(InstanceIds=[inst_id])
+            except Exception as e:
+                print(f"  describe {inst_id} failed: {e}")
+                break
 
     for bucket in resources["s3"]:
         # First seed a few checkpoint files so we have something to GET.

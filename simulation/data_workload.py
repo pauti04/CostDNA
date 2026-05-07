@@ -20,6 +20,18 @@ def main() -> None:
 
     rds = sess.client("rds")
     s3 = sess.client("s3")
+    ec2 = sess.client("ec2")
+
+    # ETL workers periodically check their compute fleet's status. Each call
+    # leaves a CloudTrail event attributed to the data team's role *for the
+    # data team's EC2 instances* — distinctive vs other teams.
+    for inst_id in resources["ec2"]:
+        for _ in range(rng.randint(2, 4)):
+            try:
+                ec2.describe_instances(InstanceIds=[inst_id])
+            except Exception as e:
+                print(f"  describe {inst_id} failed: {e}")
+                break
 
     # Status-poll the warehouse RDS (modest volume, not a tight loop).
     for db_id in resources["rds"]:
