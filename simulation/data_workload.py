@@ -1,16 +1,16 @@
-"""Data team workload — overnight batch jobs against RDS + S3.
+"""Data team workload - overnight batch ETL pipeline.
 
-Run aggressively during off-hours, light during day.
-
-Run in a loop for the 1-day demo:
-  while true; do python -m simulation.data_workload; sleep 90; done
+Distinctive shape:
+  - Heavy S3 read+write on the data bucket (ETL pulling and writing parquet).
+  - Modest RDS describes (status-poll the warehouse).
+  - No Lambda invokes (data team doesn't run web APIs).
 """
 
 from __future__ import annotations
 
 import random
 
-from simulation.common import assumed_session, load_labels, maybe
+from simulation.common import assumed_session, load_labels
 
 
 def main() -> None:
@@ -21,26 +21,35 @@ def main() -> None:
     rds = sess.client("rds")
     s3 = sess.client("s3")
 
-    # Long-running batch query simulator: many describe + get_metric calls.
+    # Status-poll the warehouse RDS (modest volume, not a tight loop).
     for db_id in resources["rds"]:
-        for _ in range(rng.randint(20, 80)):
+        for _ in range(rng.randint(3, 6)):
             try:
                 rds.describe_db_instances(DBInstanceIdentifier=db_id)
             except Exception as e:
                 print(f"  describe {db_id} failed: {e}")
                 break
 
-    # Heavy S3 traffic: write-then-read, simulate ETL.
+    # Heavy S3 ETL: write parquet shards, read them back. Object-level
+    # operations are reliably logged as data events.
     for bucket in resources["s3"]:
-        for _ in range(rng.randint(10, 30)):
-            key = f"batch/{rng.randint(0, 1_000_000)}.parquet"
+        # Write phase: ~15 parquet shards per cycle.
+        keys = []
+        for _ in range(rng.randint(12, 20)):
+            key = f"warehouse/dt={rng.randint(0, 100)}/shard-{rng.randint(0, 1_000_000)}.parquet"
+            keys.append(key)
             try:
-                if maybe(0.5, rng):
-                    s3.put_object(Bucket=bucket, Key=key, Body=b"\x00" * 1024)
-                else:
-                    s3.list_objects_v2(Bucket=bucket, MaxKeys=200)
+                s3.put_object(Bucket=bucket, Key=key, Body=b"\x00" * 4096)
             except Exception as e:
-                print(f"  s3 op failed: {e}")
+                print(f"  put {bucket} failed: {e}")
+                break
+
+        # Read phase: head + get a few back.
+        for key in keys[:rng.randint(5, 10)]:
+            try:
+                s3.head_object(Bucket=bucket, Key=key)
+            except Exception as e:
+                print(f"  head {bucket} failed: {e}")
 
 
 if __name__ == "__main__":
