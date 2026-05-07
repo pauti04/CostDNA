@@ -32,6 +32,10 @@ FEATURE_COLUMNS = (
     "cost_slope",
     "cost_variance",
     "cost_autocorr",
+    # Workload-pattern features — distinctive even on short event windows.
+    "event_diversity",       # Shannon entropy over event_name distribution
+    "write_ratio",           # fraction of events that are writes (Put/Create/Invoke)
+    "events_per_active_hour", # event density during active periods
 )
 
 
@@ -62,10 +66,40 @@ def _resource_features(rid: str, group: pd.DataFrame, account_id: str) -> dict:
         if "source_account" in events.columns:
             others = events["source_account"].dropna().astype(str)
             cross_account = int((others != account_id).any()) if len(others) else 0
+
+        # Workload-pattern features.
+        if "event_name" in events.columns:
+            ev_names = events["event_name"].astype(str)
+            # Shannon entropy of event-name distribution. High = diverse
+            # operations (data team's mix of describe + put + head). Low =
+            # repetitive pattern (ml's bursty list_objects, backend's
+            # steady invoke).
+            counts = ev_names.value_counts(normalize=True)
+            entropy = float(-(counts * np.log2(counts + 1e-12)).sum())
+            event_diversity = entropy
+            # Write-vs-read split. Writes (Put/Create/Invoke/Run/Start) vs
+            # Describes/Lists/Gets/Heads. Distinguishes ETL/training
+            # pipelines from web APIs from observability tools.
+            write_prefixes = ("Put", "Create", "Invoke", "Run", "Start",
+                              "Update", "Delete", "Modify")
+            n_writes = int(ev_names.str.startswith(write_prefixes).sum())
+            write_ratio = n_writes / max(1, event_count)
+        else:
+            event_diversity = 0.0
+            write_ratio = 0.0
+
+        # Event density during active hours: helps separate "always on"
+        # services (low density per hour but spread out) from "bursty"
+        # workloads (high density during their window, silent otherwise).
+        active_hours = max(1, len(events["timestamp"].dt.floor("h").unique()))
+        events_per_active_hour = float(event_count / active_hours)
     else:
         event_count = unique_users = unique_roles = peak_hour = 0
         weekend_ratio = 0.0
         cross_account = 0
+        event_diversity = 0.0
+        write_ratio = 0.0
+        events_per_active_hour = 0.0
 
     if len(cost) >= 3:
         y = cost["value"].astype(float).values
@@ -88,6 +122,9 @@ def _resource_features(rid: str, group: pd.DataFrame, account_id: str) -> dict:
         "cost_slope": slope,
         "cost_variance": variance,
         "cost_autocorr": autocorr,
+        "event_diversity": event_diversity,
+        "write_ratio": write_ratio,
+        "events_per_active_hour": events_per_active_hour,
     }
 
 
