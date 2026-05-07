@@ -128,7 +128,7 @@ export default function Home() {
         </p>
 
         <FadeIn>
-          <div className="my-8 p-6 rounded-lg bg-amber-100/40 border border-amber-700/40 border-l-4 max-w-3xl">
+          <div className="my-8 p-6 rounded-lg bg-bg-soft border border-border border-l-4 border-l-text max-w-3xl">
             <div className="font-mono text-xs text-accent uppercase tracking-wider mb-2">
               The catch
             </div>

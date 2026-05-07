@@ -82,16 +82,16 @@ export default function AskLive() {
   return (
     <div className="rounded-xl border border-border bg-bg-card overflow-hidden shadow-sm">
       {/* Title bar — keeps the dark "terminal" aesthetic on a light page */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-code-bg">
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-bg-soft">
         <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-bad/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-good/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-text/40" />
+          <div className="w-2.5 h-2.5 rounded-full bg-text/30" />
+          <div className="w-2.5 h-2.5 rounded-full bg-text/20" />
         </div>
-        <span className="text-xs text-code-text-soft font-mono ml-2">
-          ~/costdna · costdna chat — <span className="text-good">live demo</span>
+        <span className="text-xs text-text-soft font-mono ml-2">
+          ~/costdna · costdna chat — <span className="text-text">live demo</span>
         </span>
-        <span className="ml-auto text-[10px] font-mono text-code-text-soft uppercase tracking-wider">
+        <span className="ml-auto text-[10px] font-mono text-text-soft uppercase tracking-wider">
           synthetic AWS account · 68 resources · 4 teams
         </span>
       </div>

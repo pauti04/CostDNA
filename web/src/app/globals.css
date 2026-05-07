@@ -3,24 +3,23 @@
 @tailwind utilities;
 
 :root {
-  /* Light theme — white background with grey shades for hierarchy. */
-  --bg: #ffffff;          /* page background — pure white */
-  --bg-soft: #f4f4f5;     /* subtle section differentiation (zinc-100) */
-  --bg-card: #fafafa;     /* card surfaces (zinc-50) */
-  --border: #e4e4e7;      /* zinc-200 — soft hairlines */
-  --text: #18181b;        /* zinc-900 — primary text, near-black */
-  --text-soft: #52525b;   /* zinc-600 — secondary text, mid-grey */
-  --accent: #b45309;      /* amber-700 — single warm accent against greys */
-  --accent-2: #1d4ed8;    /* blue-700 — secondary accent for links */
-  --good: #15803d;        /* green-700 — readable on white */
-  --bad:  #b91c1c;        /* red-700 — readable on white */
+  /* Strict white + grey palette. No warm colors. */
+  --bg: #ffffff;          /* page background */
+  --bg-soft: #f4f4f5;     /* zinc-100 — section differentiation */
+  --bg-card: #fafafa;     /* zinc-50  — card surfaces */
+  --border: #e4e4e7;      /* zinc-200 — hairline borders */
+  --text: #18181b;        /* zinc-900 — primary text */
+  --text-soft: #52525b;   /* zinc-600 — secondary text */
+  --accent: #18181b;      /* zinc-900 — emphasis is just darker grey */
+  --accent-2: #52525b;    /* zinc-600 — secondary emphasis */
+  --good: #3f3f46;        /* zinc-700 (no green) */
+  --bad:  #18181b;        /* zinc-900 (no red) */
 
-  /* Code-block specific. Code-on-dark is the universal convention
-   * regardless of theme — much better readability for monospace text. */
-  --code-bg: #18181b;     /* zinc-900 */
-  --code-bg-soft: #27272a;/* zinc-800 */
-  --code-text: #fafafa;
-  --code-text-soft: #a1a1aa;
+  /* Code blocks now use light surfaces too — strict mono. */
+  --code-bg: #f4f4f5;     /* zinc-100 */
+  --code-bg-soft: #e4e4e7;/* zinc-200 */
+  --code-text: #18181b;   /* zinc-900 */
+  --code-text-soft: #52525b;
 }
 
 html {
@@ -38,7 +37,7 @@ code, pre, kbd, samp {
 }
 
 ::selection {
-  background: rgba(180, 83, 9, 0.18);   /* matches accent (amber-700) */
+  background: rgba(24, 24, 27, 0.12);   /* zinc-900 at low opacity */
   color: var(--text);
 }
 
@@ -53,7 +52,8 @@ code, pre, kbd, samp {
   }
 
   .gradient-text {
-    background: linear-gradient(120deg, #b45309 0%, #d97706 50%, #f59e0b 100%);
+    /* Mono gradient — dark grey to medium grey, no warm hue. */
+    background: linear-gradient(120deg, #18181b 0%, #3f3f46 50%, #71717a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
