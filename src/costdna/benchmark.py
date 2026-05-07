@@ -134,9 +134,15 @@ def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed
     else:
         n_layers, hidden_dim, dropout, weight_decay = 4, 16, 0.0, 5e-4
 
+    # SAGE is the consistent winner across both regimes:
+    # - On <30 labels, GAT's attention parameters collapse to random
+    # - On 50+ labels GAT is marginal (~+0.8%) but loses ~30 points on
+    #   shared-services kind. SAGE's uniform aggregation is more robust.
+    # GAT remains available via GraphSAGEClassifier(conv_type="gat") for
+    # users who want to experiment in larger / cleaner graph regimes.
     model = GraphSAGEClassifier(
         in_dim=data.x.size(1), hidden_dim=hidden_dim, n_classes=n_classes,
-        n_layers=n_layers, dropout=dropout,
+        n_layers=n_layers, dropout=dropout, conv_type="sage",
     )
     opt = torch.optim.AdamW(model.parameters(), lr=0.01, weight_decay=weight_decay)
 

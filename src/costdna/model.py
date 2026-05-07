@@ -21,22 +21,40 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import GATConv, SAGEConv
 
 
 class GraphSAGEClassifier(nn.Module):
     def __init__(self, in_dim: int, hidden_dim: int = 16, n_classes: int = 3,
                  n_layers: int = 4, dropout: float = 0.0,
-                 residual: bool = True):
+                 residual: bool = True, conv_type: str = "sage"):
+        """
+        conv_type:
+          "sage" — SAGEConv (default; uniform mean of neighbor features)
+          "gat"  — GATConv (learned attention weights per neighbor)
+
+        On small/dense graphs, GAT can learn to ignore "orchestrator" edges
+        (e.g. an admin role that touches every resource) by giving them low
+        attention weight — useful when the IAM-edge construction creates
+        cliques the SAGE mean would otherwise wash out the signal in.
+        """
         super().__init__()
         self.residual = residual
         self.dropout = dropout
         self.input_proj = nn.Linear(in_dim, hidden_dim) if residual else None
         self.convs = nn.ModuleList()
         first_in = hidden_dim if residual else in_dim
-        self.convs.append(SAGEConv(first_in, hidden_dim))
+
+        def _make_conv(in_d: int, out_d: int):
+            if conv_type == "gat":
+                # Single-head GAT to keep parameter count comparable to SAGE.
+                # heads=1 + concat=False matches SAGE's output dim.
+                return GATConv(in_d, out_d, heads=1, concat=False, dropout=dropout)
+            return SAGEConv(in_d, out_d)
+
+        self.convs.append(_make_conv(first_in, hidden_dim))
         for _ in range(n_layers - 1):
-            self.convs.append(SAGEConv(hidden_dim, hidden_dim))
+            self.convs.append(_make_conv(hidden_dim, hidden_dim))
         self.classifier = nn.Linear(hidden_dim, n_classes)
 
     def encode(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
