@@ -33,9 +33,17 @@ FEATURE_COLUMNS = (
     "cost_variance",
     "cost_autocorr",
     # Workload-pattern features — distinctive even on short event windows.
-    "event_diversity",       # Shannon entropy over event_name distribution
-    "write_ratio",           # fraction of events that are writes (Put/Create/Invoke)
-    "events_per_active_hour", # event density during active periods
+    "event_diversity",          # Shannon entropy over event_name distribution
+    "write_ratio",              # fraction of writes (Put/Create/Invoke/Run/Start)
+    "events_per_active_hour",   # event density during active periods
+    # Event-prefix mix — captures workload type independent of resource type.
+    # backend's lambda gets Invoke-heavy; data's RDS gets Describe-heavy;
+    # ml's S3 gets Put+Get pairs from training-data fetch.
+    "describe_share",           # fraction of Describe* events
+    "list_share",               # fraction of List* events
+    "get_share",                # fraction of Get*/Head* events
+    "put_share",                # fraction of Put*/Create* events
+    "invoke_share",             # fraction of Invoke* events
 )
 
 
@@ -70,23 +78,29 @@ def _resource_features(rid: str, group: pd.DataFrame, account_id: str) -> dict:
         # Workload-pattern features.
         if "event_name" in events.columns:
             ev_names = events["event_name"].astype(str)
-            # Shannon entropy of event-name distribution. High = diverse
-            # operations (data team's mix of describe + put + head). Low =
-            # repetitive pattern (ml's bursty list_objects, backend's
-            # steady invoke).
+            # Shannon entropy of event-name distribution.
             counts = ev_names.value_counts(normalize=True)
             entropy = float(-(counts * np.log2(counts + 1e-12)).sum())
             event_diversity = entropy
-            # Write-vs-read split. Writes (Put/Create/Invoke/Run/Start) vs
-            # Describes/Lists/Gets/Heads. Distinguishes ETL/training
-            # pipelines from web APIs from observability tools.
+
+            # Write-vs-read split.
             write_prefixes = ("Put", "Create", "Invoke", "Run", "Start",
                               "Update", "Delete", "Modify")
             n_writes = int(ev_names.str.startswith(write_prefixes).sum())
             write_ratio = n_writes / max(1, event_count)
+
+            # Event-prefix mix — captures workload type independent of
+            # resource type. Each share is a fraction of total events.
+            denom = max(1, event_count)
+            describe_share = float(ev_names.str.startswith("Describe").sum()) / denom
+            list_share     = float(ev_names.str.startswith("List").sum()) / denom
+            get_share      = float(ev_names.str.startswith(("Get", "Head")).sum()) / denom
+            put_share      = float(ev_names.str.startswith(("Put", "Create")).sum()) / denom
+            invoke_share   = float(ev_names.str.startswith("Invoke").sum()) / denom
         else:
             event_diversity = 0.0
             write_ratio = 0.0
+            describe_share = list_share = get_share = put_share = invoke_share = 0.0
 
         # Event density during active hours: helps separate "always on"
         # services (low density per hour but spread out) from "bursty"
@@ -100,6 +114,7 @@ def _resource_features(rid: str, group: pd.DataFrame, account_id: str) -> dict:
         event_diversity = 0.0
         write_ratio = 0.0
         events_per_active_hour = 0.0
+        describe_share = list_share = get_share = put_share = invoke_share = 0.0
 
     if len(cost) >= 3:
         y = cost["value"].astype(float).values
@@ -125,6 +140,11 @@ def _resource_features(rid: str, group: pd.DataFrame, account_id: str) -> dict:
         "event_diversity": event_diversity,
         "write_ratio": write_ratio,
         "events_per_active_hour": events_per_active_hour,
+        "describe_share": describe_share,
+        "list_share": list_share,
+        "get_share": get_share,
+        "put_share": put_share,
+        "invoke_share": invoke_share,
     }
 
 
