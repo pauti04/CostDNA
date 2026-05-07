@@ -113,11 +113,13 @@ def run_benchmark(
 def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed):
     """Train GNN with externally-supplied split (so it matches the baselines).
 
-    Auto-shrinks the architecture for small labeled sets: <30 labels triggers
-    2 layers / hidden=8 / dropout=0.4 instead of the 4-layer / hidden=16 default.
-    Also early-stops once training has converged to avoid the
-    'train=100% / test=0% by epoch 20' overfit on small data.
+    Auto-shrinks for small labeled sets (<30 labels): 2 layers / hidden=8 /
+    dropout=0.4 instead of the 4-layer / hidden=16 default. Early-stops on
+    train convergence to avoid the 'train=100% / test=0% by epoch 20'
+    overfit pattern observed on real-AWS scans.
     """
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     import torch.nn.functional as F
     from sklearn.metrics import accuracy_score, classification_report
 
@@ -155,7 +157,6 @@ def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed
                                weight=cls_weights)
         loss.backward()
         opt.step()
-        # Early stop on small data.
         if n_labeled < 30 and loss.item() < 1e-3:
             plateau += 1
             if plateau >= 10 and ep >= 20:
