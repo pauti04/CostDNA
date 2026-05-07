@@ -111,7 +111,13 @@ def run_benchmark(
 
 
 def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed):
-    """Train GNN with externally-supplied split (so it matches the baselines)."""
+    """Train GNN with externally-supplied split (so it matches the baselines).
+
+    Auto-shrinks the architecture for small labeled sets: <30 labels triggers
+    2 layers / hidden=8 / dropout=0.4 instead of the 4-layer / hidden=16 default.
+    Also early-stops once training has converged to avoid the
+    'train=100% / test=0% by epoch 20' overfit on small data.
+    """
     import torch.nn.functional as F
     from sklearn.metrics import accuracy_score, classification_report
 
@@ -119,17 +125,34 @@ def _train_with_fixed_split(data, n_classes, train_mask, test_mask, epochs, seed
 
     torch.manual_seed(seed)
     np.random.seed(seed)
-    model = GraphSAGEClassifier(
-        in_dim=data.x.size(1), hidden_dim=16, n_classes=n_classes, n_layers=4,
-    )
-    opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
-    for _ in range(epochs):
+    n_labeled = int(train_mask.sum() + test_mask.sum())
+    if n_labeled < 30:
+        n_layers, hidden_dim, dropout, weight_decay = 2, 8, 0.4, 1e-3
+    else:
+        n_layers, hidden_dim, dropout, weight_decay = 4, 16, 0.0, 5e-4
+
+    model = GraphSAGEClassifier(
+        in_dim=data.x.size(1), hidden_dim=hidden_dim, n_classes=n_classes,
+        n_layers=n_layers, dropout=dropout,
+    )
+    opt = torch.optim.AdamW(model.parameters(), lr=0.01, weight_decay=weight_decay)
+
+    plateau = 0
+    for ep in range(epochs):
         model.train()
         opt.zero_grad()
         logits, _ = model(data.x, data.edge_index)
-        F.cross_entropy(logits[train_mask], data.y[train_mask]).backward()
+        loss = F.cross_entropy(logits[train_mask], data.y[train_mask])
+        loss.backward()
         opt.step()
+        # Early stop on small data.
+        if n_labeled < 30 and loss.item() < 1e-3:
+            plateau += 1
+            if plateau >= 10 and ep >= 20:
+                break
+        else:
+            plateau = 0
 
     model.eval()
     with torch.no_grad():

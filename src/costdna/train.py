@@ -23,15 +23,39 @@ class TrainResult:
     embeddings: np.ndarray    # final hidden representation per node
 
 
-def _make_split(labeled_mask: torch.Tensor, train_frac: float, seed: int):
+def _make_split(labeled_mask: torch.Tensor, train_frac: float, seed: int,
+                labels: torch.Tensor | None = None):
+    """Stratified train/test split: guarantee each class shows up in both sides
+    of the split when possible. Critical for small-data regimes where a single
+    random shuffle can leave a class entirely out of test (or train) and
+    produce misleading 0% / 100% scores.
+    """
     rng = np.random.default_rng(seed)
     idx = np.where(labeled_mask.cpu().numpy())[0]
-    rng.shuffle(idx)
-    cut = int(len(idx) * train_frac)
+
+    if labels is None:
+        rng.shuffle(idx)
+        cut = int(len(idx) * train_frac)
+        train_idx, test_idx = idx[:cut], idx[cut:]
+    else:
+        # Stratify by class.
+        y = labels.cpu().numpy()
+        train_idx, test_idx = [], []
+        for cls in np.unique(y[idx]):
+            cls_idx = idx[y[idx] == cls]
+            rng.shuffle(cls_idx)
+            cut = max(1, int(len(cls_idx) * train_frac))
+            train_idx.extend(cls_idx[:cut])
+            # Only put into test if there's >1 sample of this class.
+            if len(cls_idx) > 1:
+                test_idx.extend(cls_idx[cut:])
+        train_idx, test_idx = np.array(train_idx), np.array(test_idx)
+
     train = torch.zeros_like(labeled_mask)
     test = torch.zeros_like(labeled_mask)
-    train[idx[:cut]] = True
-    test[idx[cut:]] = True
+    train[train_idx] = True
+    if len(test_idx) > 0:
+        test[test_idx] = True
     return train, test
 
 
@@ -48,17 +72,41 @@ def train_model(
     seed: int = 7,
     verbose: bool = True,
     n_layers: int = 4,
+    dropout: float = 0.0,
+    auto_small_data: bool = True,
+    early_stop_patience: int = 10,
 ) -> TrainResult:
     torch.manual_seed(seed)
     np.random.seed(seed)
 
+    # Auto-shrink architecture when there isn't enough labeled data to support
+    # a 4-layer / hidden=16 model (~6500 parameters). The 4-layer config was
+    # tuned on the synthetic env where we have 50+ labeled nodes; on real-AWS
+    # accounts with 15 labels it overfits hard (train=100%, test=0% by epoch
+    # 20). Below ~30 labels we switch to a 2-layer / hidden=8 / dropout=0.4
+    # architecture that has ~10x fewer parameters and generalizes much better.
+    n_labeled = int(data.labeled_mask.sum())
+    if auto_small_data and n_labeled < 30:
+        if verbose:
+            print(f"  small-data mode: {n_labeled} labels → "
+                  f"2 layers, hidden=8, dropout=0.4, weight_decay=1e-3")
+        n_layers = 2
+        hidden_dim = 8
+        dropout = 0.4
+        weight_decay = 1e-3
+
     model = GraphSAGEClassifier(
         in_dim=data.x.size(1), hidden_dim=hidden_dim, n_classes=n_classes,
-        n_layers=n_layers,
+        n_layers=n_layers, dropout=dropout,
     )
-    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    train_mask, test_mask = _make_split(data.labeled_mask, train_frac, seed)
+    train_mask, test_mask = _make_split(
+        data.labeled_mask, train_frac, seed, labels=data.y
+    )
+
+    best_train_acc = 0.0
+    plateau_count = 0
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -70,16 +118,29 @@ def train_model(
         loss.backward()
         opt.step()
 
-        if verbose and (epoch % 20 == 0 or epoch == 1):
+        # Early stopping: once train accuracy is saturated and loss is tiny,
+        # additional epochs only deepen the overfit.
+        with torch.no_grad():
             model.eval()
+            pred = model(data.x, data.edge_index)[0].argmax(dim=1)
+            tr_acc = (pred[train_mask] == data.y[train_mask]).float().mean().item()
+        if tr_acc >= best_train_acc and loss.item() < 1e-3:
+            plateau_count += 1
+        else:
+            plateau_count = 0
+            best_train_acc = max(best_train_acc, tr_acc)
+        if plateau_count >= early_stop_patience and epoch >= 20:
+            if verbose:
+                print(f"  epoch {epoch:3d}  early stop "
+                      f"(train converged for {plateau_count} epochs)")
+            break
+
+        if verbose and (epoch % 20 == 0 or epoch == 1):
             with torch.no_grad():
-                logits, _ = model(data.x, data.edge_index)
-                pred = logits.argmax(dim=1)
-                tr = (pred[train_mask] == data.y[train_mask]).float().mean().item()
                 te = ((pred[test_mask] == data.y[test_mask]).float().mean().item()
                       if test_mask.any() else float("nan"))
             print(f"  epoch {epoch:3d}  loss={loss.item():.3f}  "
-                  f"train={tr:.3f}  test={te:.3f}")
+                  f"train={tr_acc:.3f}  test={te:.3f}")
 
     # Final evaluation.
     model.eval()
