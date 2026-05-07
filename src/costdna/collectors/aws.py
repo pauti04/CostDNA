@@ -447,3 +447,32 @@ def collect_aws_signals(
                                        "commit", "timestamp"])
 
     return signals, metadata, flows_df, deploys_df
+
+
+# ─────────────────────────────────────────────────────────────────────
+# CloudProvider interface — multi-cloud dispatch
+# ─────────────────────────────────────────────────────────────────────
+
+from costdna.collectors._base import (CloudProvider, CollectionResult,  # noqa: E402
+                                       register)
+
+
+@register("aws")
+class AWSProvider(CloudProvider):
+    """Live AWS scanner. Status: production-tested on a labeled Terraform
+    env (see docs/real-aws-evidence/ for sample outputs)."""
+
+    def doctor(self, *, profile, region):
+        from costdna.doctor import run_doctor
+        checks = run_doctor(profile=profile, region=region)
+        # Convert list[Check] -> dict[str, (status, detail)]
+        return {c.name: (c.status, c.detail) for c in checks}
+
+    def collect(self, *, profile, region, days):
+        signals, metadata, flows, deploys = collect_aws_signals(
+            profile=profile, region=region, days=days,
+        )
+        return CollectionResult(
+            metadata=metadata, signals=signals,
+            flows=flows, deploys=deploys,
+        )

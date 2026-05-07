@@ -29,6 +29,22 @@ viz   = ["matplotlib>=3.8", "umap-learn>=0.5"]
 ui    = ["streamlit>=1.32"]
 agent = ["anthropic>=0.40"]
 dev   = ["pytest>=8.0", "ruff>=0.4"]
+# Multi-cloud: live collectors are implemented per official SDK patterns
+# but UNTESTED against live Azure/GCP accounts as of v0.2. AWS is the
+# production-tested path. See src/costdna/collectors/{azure_live,gcp}.py
+# for implementation status.
+azure = [
+    "azure-identity>=1.15",
+    "azure-mgmt-resource>=23.0",
+    "azure-mgmt-monitor>=6.0",
+    "azure-mgmt-costmanagement>=4.0",
+    "azure-mgmt-network>=25.0",
+]
+gcp   = [
+    "google-cloud-asset>=3.20",
+    "google-cloud-logging>=3.8",
+    "google-cloud-billing>=1.12",
+]
 
 [project.scripts]
 costdna = "costdna.cli:main"

@@ -12,6 +12,24 @@
 
 ![CostDNA live demo — multi-turn chat with the agent answering using real tool calls](docs/images/live-demo.gif)
 
+### Cloud support
+
+| Cloud | Live scan | Methodology validated | Install |
+|---|---|---|---|
+| **AWS** | ✅ production-tested ([13/15 = 87% on real AWS](#real-aws-deployment--labeled-terraform-env-3-day-window)) | ✅ | `pip install costdna` |
+| **Azure** | ⚠ implemented per Azure SDK patterns, untested against live subscription | ✅ via [Microsoft Public Dataset audit](#real-cloud-data-two-audits-one-consistent-finding) (2.6M VMs) | `pip install 'costdna[azure]'` |
+| **GCP** | ⚠ implemented per Google Cloud SDK patterns, untested against live project | — | `pip install 'costdna[gcp]'` |
+
+The model + features + agent are cloud-agnostic — only the collector layer is provider-specific. AWS calls `cloudtrail:LookupEvents`; Azure calls `monitor.activity_logs.list`; GCP calls `cloud_logging.list_entries`. All three return identical-shape DataFrames downstream, so the rest of the pipeline doesn't know which cloud the data came from.
+
+```bash
+costdna scan --cloud aws    --aws-profile prod                   # production-tested path
+costdna scan --cloud azure  --region <subscription_id>            # az login first; untested live
+costdna scan --cloud gcp    --region <project_id>                 # gcloud auth ADC; untested live
+```
+
+The Azure / GCP collectors live at [`src/costdna/collectors/azure_live.py`](src/costdna/collectors/azure_live.py) and [`src/costdna/collectors/gcp.py`](src/costdna/collectors/gcp.py). They follow each cloud's official SDK patterns with documented type signatures and required IAM scopes — but I haven't validated either against a live account. **Anyone with an Azure subscription or a GCP project can flip the ⚠ to ✅ in an afternoon — the code is in place, it just needs a real run.**
+
 ```bash
 $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
 ? why did our bill spike Tuesday?

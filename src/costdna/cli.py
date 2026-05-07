@@ -78,7 +78,8 @@ def _effective_teams(metadata: pd.DataFrame) -> tuple[str, ...]:
 def _load(synthetic: bool, aws_profile, region, days, seed,
           azure_trace: Path | None = None,
           azure_top_n: int = 25, azure_max_per_sub: int = 200,
-          azure_readings: Path | None = None):
+          azure_readings: Path | None = None,
+          cloud: str = "aws"):
     if azure_trace is not None:
         suffix = " + real CPU readings" if azure_readings else " (summary stats only)"
         console.print(f"[bold cyan]→[/] Loading Microsoft Azure public dataset "
@@ -92,19 +93,40 @@ def _load(synthetic: bool, aws_profile, region, days, seed,
         console.print(f"[bold cyan]→[/] Generating synthetic signals "
                       f"(seed={seed}, days={days}, with hard cases)")
         return generate_synthetic_signals(n_per_type_per_team=3, days=days, seed=seed)
-    console.print(f"[bold cyan]→[/] Collecting from AWS "
-                  f"(profile={aws_profile or 'default'}, region={region}, days={days})")
-    # Pass our well-known simulator role names so the CloudTrail Username
-    # sweep finds events made by team principals even when they don't show
-    # up in EC2/RDS/Lambda metadata.
-    extra_usernames = []
-    try:
-        from simulation.common import TEAM_ROLE
-        extra_usernames = list(TEAM_ROLE.values())
-    except ImportError:
-        pass
-    return collect_aws_signals(profile=aws_profile, region=region, days=days,
-                                extra_usernames=extra_usernames)
+
+    # Live cloud scan — multi-cloud dispatch via the CloudProvider registry.
+    # `--cloud aws` (default) keeps the original AWS path; `--cloud azure`
+    # and `--cloud gcp` use the live collectors in `collectors/azure_live.py`
+    # and `collectors/gcp.py` (Azure interprets `region` as subscription_id;
+    # GCP interprets `region` as project_id — see those modules' docstrings).
+    if cloud == "aws":
+        console.print(f"[bold cyan]→[/] Collecting from AWS "
+                      f"(profile={aws_profile or 'default'}, region={region}, days={days})")
+        # Pass our well-known simulator role names so the CloudTrail Username
+        # sweep finds events made by team principals even when they don't show
+        # up in EC2/RDS/Lambda metadata.
+        extra_usernames = []
+        try:
+            from simulation.common import TEAM_ROLE
+            extra_usernames = list(TEAM_ROLE.values())
+        except ImportError:
+            pass
+        return collect_aws_signals(profile=aws_profile, region=region, days=days,
+                                    extra_usernames=extra_usernames)
+
+    # Multi-cloud path (Azure / GCP).
+    from costdna.collectors._base import get_provider
+    provider = get_provider(cloud)
+    console.print(f"[bold cyan]→[/] Collecting from [bold]{cloud}[/] "
+                  f"(scope={region}, days={days})")
+    if cloud in ("azure", "gcp"):
+        console.print(
+            f"[yellow]⚠ {cloud} live collector is untested against a "
+            f"production account — see src/costdna/collectors/{cloud}*.py "
+            f"for status.[/]"
+        )
+    result = provider.collect(profile=aws_profile, region=region, days=days)
+    return result.signals, result.metadata, result.flows, result.deploys
 
 
 def _prepare(signals, metadata, flows):
@@ -148,8 +170,17 @@ def main() -> None:
 
 
 @main.command()
+@click.option("--cloud",
+              type=click.Choice(["aws", "azure", "gcp"], case_sensitive=False),
+              default="aws", show_default=True,
+              help="Which cloud to scan. AWS is production-tested; Azure and "
+                   "GCP collectors are implemented per official SDK patterns "
+                   "but untested against a live account — see "
+                   "src/costdna/collectors/{azure_live,gcp}.py for status.")
 @click.option("--aws-profile", default=None)
-@click.option("--region", default="us-east-1", show_default=True)
+@click.option("--region", default="us-east-1", show_default=True,
+              help="AWS region, OR Azure subscription_id, OR GCP project_id "
+                   "(billing/audit scope depends on --cloud).")
 @click.option("--days", default=14, show_default=True)
 @click.option("--synthetic/--live", default=None)
 @click.option("--seed", default=42, show_default=True)
@@ -178,19 +209,20 @@ def main() -> None:
                    "instead of synthesizing from summary stats.")
 @click.option("--save-umap", is_flag=True,
               help="Save a 2D UMAP plot of GraphSAGE embeddings (requires --save-dir).")
-def scan(aws_profile, region, days, synthetic, seed, epochs, save_dir,
+def scan(cloud, aws_profile, region, days, synthetic, seed, epochs, save_dir,
          show_truth, show_kind, labels_path, azure_trace,
          azure_top_n, azure_max_per_sub, save_umap, azure_readings):
     """Run the full pipeline: collect → features → graph → train → attribute → explain."""
     if azure_trace is not None:
         synthetic = False
     elif synthetic is None:
-        synthetic = aws_profile is None
+        synthetic = aws_profile is None and cloud == "aws"
     signals, metadata, flows, deploys = _load(
         synthetic, aws_profile, region, days, seed,
         azure_trace=azure_trace,
         azure_top_n=azure_top_n, azure_max_per_sub=azure_max_per_sub,
-        azure_readings=azure_readings
+        azure_readings=azure_readings,
+        cloud=cloud,
     )
     if metadata.empty:
         console.print("[red]No resources found.[/]")
