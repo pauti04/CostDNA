@@ -1,0 +1,26 @@
+[
+  {
+    "resource_id": "cloudflare-access-logs-63e91312",
+    "spike_amount": 1.104e-06,
+    "spike_time": "2026-05-06T00:00:00+00:00",
+    "likely_team": "unknown",
+    "p_value": 1.0,
+    "sentence": "Resource cloudflare-access-logs-63e91312 had a $0.00 cost spike at Wed 00:00, but no team's deploy pattern shows a causal link."
+  },
+  {
+    "resource_id": "alice-smith-personal-bucket-63e91312",
+    "spike_amount": 1.104e-06,
+    "spike_time": "2026-05-06T00:00:00+00:00",
+    "likely_team": "unknown",
+    "p_value": 1.0,
+    "sentence": "Resource alice-smith-personal-bucket-63e91312 had a $0.00 cost spike at Wed 00:00, but no team's deploy pattern shows a causal link."
+  },
+  {
+    "resource_id": "old-billing-bucket-2019-63e91312",
+    "spike_amount": 1.104e-06,
+    "spike_time": "2026-05-06T00:00:00+00:00",
+    "likely_team": "unknown",
+    "p_value": 1.0,
+    "sentence": "Resource old-billing-bucket-2019-63e91312 had a $0.00 cost spike at Wed 00:00, but no team's deploy pattern shows a causal link."
+  }
+]

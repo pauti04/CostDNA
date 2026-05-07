@@ -1,0 +1,115 @@
+→ Collecting from AWS (profile=default, region=us-east-1, days=3)
+  loaded 25 resources, 13,402 signal rows, 0 flow edges, 0 deploys
+  merged 15 labels from labels.csv
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5219.44it/s]
+  graph: 25 nodes, 300 edges
+→ Training GraphSAGE (4 classes)
+  small-data mode: 15 labels → 2 layers, hidden=8, dropout=0.4, weight_decay=1e-3
+  class weights: {0: 0.8299999833106995, 1: 0.8299999833106995, 2: 0.8299999833106995, 3: 2.5}
+  epoch   1  loss=1.398  train=0.444  test=0.000
+  epoch  20  loss=0.846  train=0.667  test=0.500
+  epoch  40  loss=0.432  train=0.889  test=0.500
+  epoch  60  loss=0.394  train=1.000  test=0.333
+  epoch  80  loss=0.154  train=1.000  test=0.667
+  epoch 100  loss=0.081  train=1.000  test=0.500
+  epoch 120  loss=0.063  train=1.000  test=0.667
+  epoch 140  loss=0.020  train=1.000  test=0.667
+  epoch 160  loss=0.023  train=1.000  test=0.667
+  epoch 180  loss=0.265  train=1.000  test=0.667
+  epoch 200  loss=0.031  train=1.000  test=0.667
+┏━━━━━━━━━━━━━━━━━━━━━━━━ CostDNA — Executive summary ━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ You have $0.00 in untagged spend across 25 resources.                        ┃
+┃                                                                              ┃
+┃ ✓ Ready to tag: 20 resources, $0.00 (67%) at ≥70% confidence                 ┃
+┃ ⚠ Need review: 5 resources, $0.00 (33%) below 70% confidence                 ┃
+┃                                                                              ┃
+┃ Recommended actions:                                                         ┃
+┃   • Tag 10 resources as ml → moves $0.00 out of 'untagged'.                  ┃
+┃   • Tag 7 resources as backend → moves $0.00 out of 'untagged'.              ┃
+┃   • Tag 8 resources as data → moves $0.00 out of 'untagged'.                 ┃
+┃   • Review 5 low-confidence resources ($0.00) before tagging — these need a  ┃
+┃ human eye.                                                                   ┃
+┃                                                                              ┃
+┃   Run `costdna apply --dry-run` to preview tag commands, or `costdna apply`  ┃
+┃ to write them.                                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+╭─────────────────────────────── Model accuracy ───────────────────────────────╮
+│ Train accuracy    100.0%                                                     │
+│ Test  accuracy    66.7%                                                      │
+│ Random baseline   25.0%                                                      │
+│ Lift over random  +41.7%                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                    CostDNA — Inferred ownership                    
+╭──────────────────────────────────────┬────────┬───────────┬──────╮
+│ Resource                             │  Type  │ Predicted │ Conf │
+├──────────────────────────────────────┼────────┼───────────┼──────┤
+│ i-0d128969344fa149f                  │  ec2   │ backend   │ 1.00 │
+│ i-0ab36e76003fecdc3                  │  ec2   │ data      │ 1.00 │
+│ i-07462d7921cb3c466                  │  ec2   │ ml        │ 0.95 │
+│ i-0ae5ab12305f910af                  │  ec2   │ ml        │ 0.95 │
+│ i-0c2c7a3998ab4e067                  │  ec2   │ data      │ 1.00 │
+│ i-0d75f2c09b4453425                  │  ec2   │ backend   │ 0.97 │
+│ i-02a24ac56fa9ecc30                  │  ec2   │ ml        │ 0.95 │
+│ costdna-synth-backend                │  rds   │ backend   │ 1.00 │
+│ costdna-synth-data                   │  rds   │ ml        │ 0.55 │
+│ costdna-synth-ml                     │  rds   │ ml        │ 0.95 │
+│ ml-training-fn                       │ lambda │ ml        │ 0.93 │
+│ billing-export-2018                  │ lambda │ data      │ 0.65 │
+│ backend-svc-fn                       │ lambda │ backend   │ 1.00 │
+│ myFunction-2                         │ lambda │ data      │ 0.93 │
+│ DatadogForwarder-63e91312            │ lambda │ ml        │ 0.52 │
+│ test-deploy-v3                       │ lambda │ data      │ 0.59 │
+│ alice-smith-test-fn                  │ lambda │ data      │ 0.94 │
+│ data-pipeline-fn                     │ lambda │ data      │ 1.00 │
+│ alice-smith-personal-bucket-63e91312 │   s3   │ data      │ 0.61 │
+│ cloudflare-access-logs-63e91312      │   s3   │ backend   │ 0.99 │
+│ costdna-synth-backend-63e91312       │   s3   │ backend   │ 1.00 │
+│ costdna-synth-cloudtrail-63e91312    │   s3   │ backend   │ 0.81 │
+│ costdna-synth-data-63e91312          │   s3   │ ml        │ 0.89 │
+│ costdna-synth-ml-63e91312            │   s3   │ ml        │ 0.96 │
+│ old-billing-bucket-2019-63e91312     │   s3   │ ml        │ 0.90 │
+╰──────────────────────────────────────┴────────┴───────────┴──────╯
+╭───────────────────────────── Dollars attributed ─────────────────────────────╮
+│                                                                              │
+│   Team       Resources   Spend ($)    Share                                  │
+│  ───────────────────────────────────────────                                 │
+│   ml                 5       $0.00    33.3%                                  │
+│   backend            4       $0.00    33.3%                                  │
+│   data               1       $0.00    33.3%                                  │
+│   platform           0       $0.00     0.0%                                  │
+│   TOTAL             10       $0.00   100.0%                                  │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+                      Top 5 anomalies (don't fit any team)                      
+╭───────────────────┬────────────┬────────────┬─────────────┬──────────────────╮
+│ Resource          │ Best guess │ Confidence │ σ from team │ Reason           │
+├───────────────────┼────────────┼────────────┼─────────────┼──────────────────┤
+│ costdna-synth-da… │ ml         │       0.55 │        +1.8 │ low confidence   │
+│                   │            │            │             │ (0.55) + 1.8σ    │
+│                   │            │            │             │ from ml centroid │
+│ DatadogForwarder… │ ml         │       0.52 │        +1.7 │ low confidence   │
+│                   │            │            │             │ (0.52) + 1.7σ    │
+│                   │            │            │             │ from ml centroid │
+│ data-pipeline-fn  │ data       │       1.00 │        +2.4 │ 2.4σ from data   │
+│                   │            │            │             │ centroid         │
+│ backend-svc-fn    │ backend    │       1.00 │        +2.3 │ 2.3σ from        │
+│                   │            │            │             │ backend centroid │
+│ test-deploy-v3    │ data       │       0.59 │        -0.8 │ low confidence   │
+│                   │            │            │             │ (0.59)           │
+╰───────────────────┴────────────┴────────────┴─────────────┴──────────────────╯
+  Investigate these. They might be vendor resources, compromised infra, or a new
+team forming.
+→ Looking for cost spikes
+╭───────────────────────── Causal spike explanations ──────────────────────────╮
+│ • Resource cloudflare-access-logs-63e91312 had a $0.00 cost spike at Wed     │
+│ 00:00, but no team's deploy pattern shows a causal link.                     │
+│                                                                              │
+│ • Resource alice-smith-personal-bucket-63e91312 had a $0.00 cost spike at    │
+│ Wed 00:00, but no team's deploy pattern shows a causal link.                 │
+│                                                                              │
+│ • Resource old-billing-bucket-2019-63e91312 had a $0.00 cost spike at Wed    │
+│ 00:00, but no team's deploy pattern shows a causal link.                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  wrote outputs to runs/fresh-2026-05-07-1432
