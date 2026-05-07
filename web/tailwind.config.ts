@@ -20,6 +20,10 @@ const config: Config = {
         "accent-2": "var(--accent-2)",
         good: "var(--good)",
         bad: "var(--bad)",
+        "code-bg": "var(--code-bg)",
+        "code-bg-soft": "var(--code-bg-soft)",
+        "code-text": "var(--code-text)",
+        "code-text-soft": "var(--code-text-soft)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

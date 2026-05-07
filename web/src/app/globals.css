@@ -3,16 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --bg: #09090b;
-  --bg-soft: #18181b;
-  --bg-card: #1c1c20;
-  --border: #27272a;
-  --text: #fafafa;
-  --text-soft: #a1a1aa;
-  --accent: #f59e0b;     /* amber-500 — matches the GraphSAGE chart line */
-  --accent-2: #60a5fa;   /* blue-400 */
-  --good: #22c55e;
-  --bad: #ef4444;
+  /* Light theme — white background with grey shades for hierarchy. */
+  --bg: #ffffff;          /* page background — pure white */
+  --bg-soft: #f4f4f5;     /* subtle section differentiation (zinc-100) */
+  --bg-card: #fafafa;     /* card surfaces (zinc-50) */
+  --border: #e4e4e7;      /* zinc-200 — soft hairlines */
+  --text: #18181b;        /* zinc-900 — primary text, near-black */
+  --text-soft: #52525b;   /* zinc-600 — secondary text, mid-grey */
+  --accent: #b45309;      /* amber-700 — single warm accent against greys */
+  --accent-2: #1d4ed8;    /* blue-700 — secondary accent for links */
+  --good: #15803d;        /* green-700 — readable on white */
+  --bad:  #b91c1c;        /* red-700 — readable on white */
+
+  /* Code-block specific. Code-on-dark is the universal convention
+   * regardless of theme — much better readability for monospace text. */
+  --code-bg: #18181b;     /* zinc-900 */
+  --code-bg-soft: #27272a;/* zinc-800 */
+  --code-text: #fafafa;
+  --code-text-soft: #a1a1aa;
 }
 
 html {
@@ -30,7 +38,7 @@ code, pre, kbd, samp {
 }
 
 ::selection {
-  background: rgba(245, 158, 11, 0.25);
+  background: rgba(180, 83, 9, 0.18);   /* matches accent (amber-700) */
   color: var(--text);
 }
 
@@ -39,13 +47,13 @@ code, pre, kbd, samp {
 
   .grid-pattern {
     background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
     background-size: 60px 60px;
   }
 
   .gradient-text {
-    background: linear-gradient(120deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%);
+    background: linear-gradient(120deg, #b45309 0%, #d97706 50%, #f59e0b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

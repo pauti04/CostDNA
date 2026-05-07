@@ -80,18 +80,18 @@ export default function AskLive() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-zinc-950/80 overflow-hidden">
-      {/* Title bar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-zinc-900/60">
+    <div className="rounded-xl border border-border bg-bg-card overflow-hidden shadow-sm">
+      {/* Title bar — keeps the dark "terminal" aesthetic on a light page */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-code-bg">
         <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-bad/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-good/70" />
+          <div className="w-2.5 h-2.5 rounded-full bg-bad/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-good/80" />
         </div>
-        <span className="text-xs text-text-soft font-mono ml-2">
+        <span className="text-xs text-code-text-soft font-mono ml-2">
           ~/costdna · costdna chat — <span className="text-good">live demo</span>
         </span>
-        <span className="ml-auto text-[10px] font-mono text-text-soft uppercase tracking-wider">
+        <span className="ml-auto text-[10px] font-mono text-code-text-soft uppercase tracking-wider">
           synthetic AWS account · 68 resources · 4 teams
         </span>
       </div>
@@ -99,7 +99,7 @@ export default function AskLive() {
       {/* Conversation */}
       <div
         ref={scrollRef}
-        className="p-5 font-mono text-[13px] leading-relaxed min-h-[280px] max-h-[480px] overflow-y-auto"
+        className="p-5 font-mono text-[13px] leading-relaxed min-h-[280px] max-h-[480px] overflow-y-auto bg-bg-card"
       >
         {turns.length === 0 && (
           <div className="text-text-soft">
@@ -112,7 +112,7 @@ export default function AskLive() {
                 <button
                   key={s}
                   onClick={() => void send(s)}
-                  className="text-left text-xs px-3 py-2 rounded-md bg-zinc-900 border border-border hover:border-accent hover:text-accent transition"
+                  className="text-left text-xs px-3 py-2 rounded-md bg-bg-soft border border-border hover:border-accent hover:text-accent transition"
                 >
                   {s}
                 </button>
@@ -122,17 +122,17 @@ export default function AskLive() {
         )}
 
         {turns.map((t, i) => (
-          <div key={i} className={i > 0 ? "mt-5 pt-5 border-t border-border/50" : ""}>
-            <div className="text-zinc-200">
+          <div key={i} className={i > 0 ? "mt-5 pt-5 border-t border-border" : ""}>
+            <div className="text-text">
               <span className="text-accent">❯ </span>
               {t.question}
             </div>
             {t.answer ? (
-              <div className="mt-2 text-zinc-300 whitespace-pre-wrap">
+              <div className="mt-2 text-text whitespace-pre-wrap">
                 {t.answer}
                 {t.toolCalls && t.toolCalls.length > 0 && (
                   <details className="mt-3 text-xs text-text-soft">
-                    <summary className="cursor-pointer hover:text-zinc-300">
+                    <summary className="cursor-pointer hover:text-text">
                       🔧 {t.toolCalls.length} tool call
                       {t.toolCalls.length === 1 ? "" : "s"}
                     </summary>
@@ -164,7 +164,7 @@ export default function AskLive() {
       {/* Input */}
       <form
         onSubmit={onSubmit}
-        className="flex items-center gap-2 px-4 py-3 border-t border-border bg-zinc-900/40"
+        className="flex items-center gap-2 px-4 py-3 border-t border-border bg-bg-soft"
       >
         <span className="text-accent font-mono text-sm">❯</span>
         <input
@@ -173,7 +173,7 @@ export default function AskLive() {
           onChange={(e) => setInput(e.target.value)}
           placeholder={busy ? "agent is thinking…" : "ask anything…"}
           disabled={busy}
-          className="flex-1 bg-transparent outline-none text-sm font-mono placeholder:text-text-soft/60 disabled:opacity-50"
+          className="flex-1 bg-transparent outline-none text-sm font-mono text-text placeholder:text-text-soft/60 disabled:opacity-50"
           maxLength={500}
         />
         <button
@@ -182,8 +182,8 @@ export default function AskLive() {
           className={clsx(
             "px-3 py-1 rounded text-xs font-semibold transition",
             busy || !input.trim()
-              ? "bg-zinc-800 text-text-soft cursor-not-allowed"
-              : "bg-accent text-zinc-950 hover:brightness-110",
+              ? "bg-bg-soft text-text-soft cursor-not-allowed border border-border"
+              : "bg-accent text-white hover:brightness-110",
           )}
         >
           ask

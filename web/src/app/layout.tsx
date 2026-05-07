@@ -29,8 +29,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} dark`}>
-      <body className="bg-zinc-950 text-zinc-100 antialiased font-sans">
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+      <body className="bg-bg text-text antialiased font-sans">
         {children}
       </body>
     </html>

@@ -46,7 +46,7 @@ export default function Home() {
               A natural-language agent that combines a behavioral GraphSAGE GNN
               with LLM-derived semantic features and structured CloudTrail /
               Cost Explorer queries. Answers questions like{" "}
-              <em className="text-zinc-300">"why did our bill spike Tuesday?"</em>{" "}
+              <em className="text-text">"why did our bill spike Tuesday?"</em>{" "}
               with specific resources, teams, and dollar amounts.
             </p>
           </FadeIn>
@@ -55,7 +55,7 @@ export default function Home() {
               <a
                 href={GH_URL}
                 target="_blank"
-                className="inline-flex items-center gap-2 bg-accent text-zinc-950 font-semibold px-5 py-2.5 rounded-md hover:brightness-110 transition"
+                className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-5 py-2.5 rounded-md hover:brightness-110 transition"
               >
                 ↗ View on GitHub
               </a>
@@ -115,7 +115,7 @@ export default function Home() {
           Existing FinOps dashboards (CloudHealth, Vantage, Apptio) are only
           as good as the tags you have — and on most accounts, the tags you
           have aren't enough. CostDNA is the input layer: a tool that{" "}
-          <em className="text-zinc-300">infers</em> the missing tags from
+          <em className="text-text">infers</em> the missing tags from
           behavior, then lets you ask English questions about the result.
         </p>
       </Section>
@@ -128,18 +128,18 @@ export default function Home() {
         </p>
 
         <FadeIn>
-          <div className="my-8 p-6 rounded-lg bg-amber-500/5 border border-amber-500/30 border-l-4 max-w-3xl">
+          <div className="my-8 p-6 rounded-lg bg-amber-100/40 border border-amber-700/40 border-l-4 max-w-3xl">
             <div className="font-mono text-xs text-accent uppercase tracking-wider mb-2">
               The catch
             </div>
-            <p className="text-zinc-300 leading-relaxed">
+            <p className="text-text leading-relaxed">
               Across all <b>33,205 deployments</b> in the Azure trace,{" "}
               <b>100%</b> mapped 1:1 to a single subscription. So{" "}
-              <code className="text-amber-300 bg-zinc-900 px-1.5 py-0.5 rounded text-sm">
+              <code className="text-accent bg-bg-soft px-1.5 py-0.5 rounded text-sm">
                 deployment_id
               </code>
               , used as a graph edge, was a perfect lookup of{" "}
-              <code className="text-amber-300 bg-zinc-900 px-1.5 py-0.5 rounded text-sm">
+              <code className="text-accent bg-bg-soft px-1.5 py-0.5 rounded text-sm">
                 subscription_id
               </code>
               . LabelProp's "97%" was a graph database join, not learning.
@@ -150,7 +150,7 @@ export default function Home() {
         <p className="text-text-soft leading-relaxed max-w-3xl mb-8">
           Most engineers stop when they see a high accuracy number and ship
           it. I caught the leak by asking{" "}
-          <em className="text-zinc-300">"are you sure data is accurate?"</em>{" "}
+          <em className="text-text">"are you sure data is accurate?"</em>{" "}
           The same audit on Microsoft's Philly DL trace surfaced another
           partial leak: 85% of users belong to one virtual cluster. Three
           datasets, three different shortcuts, one consistent finding.
@@ -158,7 +158,7 @@ export default function Home() {
 
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-900/60">
+            <thead className="bg-bg-soft">
               <tr>
                 <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-text-soft font-semibold">
                   Dataset
@@ -274,7 +274,7 @@ export default function Home() {
         </FadeIn>
         <p className="mt-4 text-sm text-text-soft max-w-3xl">
           Synthetic AWS env. The tan{" "}
-          <span className="font-mono text-zinc-200">unowned</span> cluster (vendor
+          <span className="font-mono text-text">unowned</span> cluster (vendor
           / legacy / orphan / shadow resources) sits visibly apart from the
           team clusters. The anomaly detector catches them automatically.
         </p>
@@ -337,8 +337,8 @@ $ costdna serve
         </div>
 
         <p className="mt-8 text-sm text-text-soft max-w-3xl">
-          Setup for the agent commands: <code className="font-mono text-zinc-300 bg-zinc-900/80 px-1.5 py-0.5 rounded">pip install &apos;costdna[agent]&apos;</code> +{" "}
-          <code className="font-mono text-zinc-300 bg-zinc-900/80 px-1.5 py-0.5 rounded">export ANTHROPIC_API_KEY=...</code>
+          Setup for the agent commands: <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">pip install &apos;costdna[agent]&apos;</code> +{" "}
+          <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">export ANTHROPIC_API_KEY=...</code>
         </p>
       </Section>
 
