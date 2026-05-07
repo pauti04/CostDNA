@@ -11,11 +11,17 @@ const config: Config = {
     extend: {
       colors: {
         bg: "var(--bg)",
+        "bg-section": "var(--bg-section)",
         "bg-soft": "var(--bg-soft)",
         "bg-card": "var(--bg-card)",
+        "bg-deep": "var(--bg-deep)",
+        "bg-deep-soft": "var(--bg-deep-soft)",
         border: "var(--border)",
+        "border-strong": "var(--border-strong)",
         text: "var(--text)",
         "text-soft": "var(--text-soft)",
+        "text-muted": "var(--text-muted)",
+        "text-on-deep": "var(--text-on-deep)",
         accent: "var(--accent)",
         "accent-2": "var(--accent-2)",
         good: "var(--good)",

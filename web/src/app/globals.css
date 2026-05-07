@@ -3,22 +3,26 @@
 @tailwind utilities;
 
 :root {
-  /* Strict white + grey palette. No warm colors. */
-  --bg: #ffffff;          /* page background */
-  --bg-soft: #f4f4f5;     /* zinc-100 — section differentiation */
-  --bg-card: #fafafa;     /* zinc-50  — card surfaces */
-  --border: #e4e4e7;      /* zinc-200 — hairline borders */
+  /* Layered grey palette — 7 distinct shades for hierarchy. */
+  --bg: #fafafa;          /* page background — very light grey, not stark white */
+  --bg-section: #ffffff;  /* clean white for section contrast */
+  --bg-soft: #f4f4f5;     /* zinc-100 — subtle differentiation */
+  --bg-card: #ffffff;     /* white cards on grey page */
+  --bg-deep: #27272a;     /* zinc-800 — dark grey for hero/CTA contrast */
+  --bg-deep-soft: #3f3f46;/* zinc-700 — secondary dark surfaces */
+  --border: #e4e4e7;      /* zinc-200 — soft hairlines */
+  --border-strong: #a1a1aa;/* zinc-400 — emphasis borders */
   --text: #18181b;        /* zinc-900 — primary text */
   --text-soft: #52525b;   /* zinc-600 — secondary text */
-  --accent: #18181b;      /* zinc-900 — emphasis is just darker grey */
+  --text-muted: #71717a;  /* zinc-500 — tertiary text */
+  --text-on-deep: #fafafa;/* off-white for dark backgrounds */
+  --accent: #18181b;      /* zinc-900 — primary CTA / emphasis */
   --accent-2: #52525b;    /* zinc-600 — secondary emphasis */
-  --good: #3f3f46;        /* zinc-700 (no green) */
-  --bad:  #18181b;        /* zinc-900 (no red) */
-
-  /* Code blocks now use light surfaces too — strict mono. */
-  --code-bg: #f4f4f5;     /* zinc-100 */
-  --code-bg-soft: #e4e4e7;/* zinc-200 */
-  --code-text: #18181b;   /* zinc-900 */
+  --good: #3f3f46;
+  --bad:  #18181b;
+  --code-bg: #f4f4f5;
+  --code-bg-soft: #e4e4e7;
+  --code-text: #18181b;
   --code-text-soft: #52525b;
 }
 
@@ -30,6 +34,7 @@ body {
   color: var(--text);
   background: var(--bg);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01", "cv01";
 }
 
 code, pre, kbd, samp {
@@ -37,7 +42,7 @@ code, pre, kbd, samp {
 }
 
 ::selection {
-  background: rgba(24, 24, 27, 0.12);   /* zinc-900 at low opacity */
+  background: rgba(24, 24, 27, 0.12);
   color: var(--text);
 }
 
@@ -46,16 +51,33 @@ code, pre, kbd, samp {
 
   .grid-pattern {
     background-image:
-      linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+      linear-gradient(rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
     background-size: 60px 60px;
   }
 
   .gradient-text {
-    /* Mono gradient — dark grey to medium grey, no warm hue. */
     background: linear-gradient(120deg, #18181b 0%, #3f3f46 50%, #71717a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Soft shadow for elevated surfaces. */
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+  .shadow-soft-lg {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.05),
+      0 8px 24px rgba(0, 0, 0, 0.06),
+      0 24px 48px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Section-level horizontal dividers. */
+  .divider-soft {
+    border-top: 1px solid var(--border);
   }
 }
