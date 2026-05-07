@@ -113,8 +113,10 @@ def _audit_logs(sdk, project_id: str, resource_ids: list[str],
                 days: int) -> list[dict]:
     """Cloud Audit Logs ≈ AWS CloudTrail.
 
-    We query logName=cloudaudit.googleapis.com%2Factivity for the last N
-    days, then post-filter to entries whose resource name matches ours.
+    Cloud Logging stores audit entries as `ProtobufEntry` whose payload is a
+    `google.cloud.audit.AuditLog` proto (NOT a dict). We extract fields via
+    proto attribute access. `StructEntry` payloads (rare for audit logs but
+    possible) are dicts and accessed accordingly.
     """
     client = sdk["logging"].Client(project=project_id)
     end = datetime.now(timezone.utc)
@@ -124,20 +126,37 @@ def _audit_logs(sdk, project_id: str, resource_ids: list[str],
         f'AND timestamp>="{start.isoformat()}"'
     )
 
+    def _extract(entry):
+        """Return (method_name, principal, resource_name) regardless of
+        whether `entry` is a ProtobufEntry (audit-log proto) or StructEntry
+        (dict). Audit logs are almost always proto."""
+        payload = entry.payload
+        if payload is None:
+            return "", "", ""
+        # ProtobufEntry: payload is a proto message (google.cloud.audit.AuditLog)
+        # with snake_case attrs.
+        if hasattr(payload, "method_name"):
+            method = getattr(payload, "method_name", "") or ""
+            auth = getattr(payload, "authentication_info", None)
+            principal = getattr(auth, "principal_email", "") if auth else ""
+            res = getattr(payload, "resource_name", "") or ""
+            return method, principal, res
+        # StructEntry: payload is a dict with camelCase keys (the JSON wire
+        # format from Logging API).
+        if isinstance(payload, dict):
+            method = payload.get("methodName", "") or ""
+            principal = (payload.get("authenticationInfo") or {}).get(
+                "principalEmail", "") or ""
+            res = payload.get("resourceName", "") or ""
+            return method, principal, res
+        return "", "", ""
+
     rid_set = {r.lower() for r in resource_ids}
     rows = []
     try:
         for entry in client.list_entries(filter_=flt):
-            payload = entry.payload or {}
-            method_name = payload.get("methodName", "") or ""
-            principal = (
-                payload.get("authenticationInfo", {})
-                       .get("principalEmail", "")
-                or ""
-            )
-            # The resource name appears in payload.resourceName as
-            # "projects/.../instances/{name}" or similar.
-            resource_name = (payload.get("resourceName", "") or "").lower()
+            method_name, principal, resource_name = _extract(entry)
+            resource_name = resource_name.lower()
             match = next((r for r in rid_set if r and r in resource_name), None)
             if not match:
                 continue
@@ -145,7 +164,7 @@ def _audit_logs(sdk, project_id: str, resource_ids: list[str],
                 "resource_id": match,
                 "signal_type": "cloudtrail_event",
                 "user_identity": principal,
-                "iam_role": principal,        # GCP collapses this distinction
+                "iam_role": principal,
                 "event_name": method_name,
                 "source_account": project_id,
                 "value": 1.0,

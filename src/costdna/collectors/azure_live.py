@@ -84,33 +84,38 @@ AZURE_TYPE_MAP = {
 
 
 def _list_resources(sdk, credential, subscription_id: str) -> list[dict]:
-    """Enumerate every Azure resource that maps to a CostDNA resource type."""
+    """Enumerate every Azure resource that maps to a CostDNA resource type.
+
+    Uses `expand=createdTime,changedTime` to pull `GenericResourceExpanded`
+    instead of the bare `GenericResource` (the latter doesn't have a
+    `created_time` attribute). Verified against azure-mgmt-resource v25.
+    """
     rm = sdk["ResourceManagementClient"](credential, subscription_id)
     out = []
-    for r in rm.resources.list():
+    for r in rm.resources.list(expand="createdTime,changedTime"):
         # r.type looks like "Microsoft.Compute/virtualMachines"
         rtype = AZURE_TYPE_MAP.get(r.type)
         if rtype is None:
             continue
-        # Identity binding ≈ AWS IAM role.
-        identity = (getattr(r, "identity", None) or {})
-        principal_id = getattr(identity, "principal_id", "") or ""
+        # Identity binding ≈ AWS IAM role. r.identity is a ResourceIdentity
+        # object on resources with managed identity, None otherwise.
+        identity = getattr(r, "identity", None)
+        principal_id = (getattr(identity, "principal_id", "") or "") if identity else ""
+        # created_time only exists on GenericResourceExpanded (when expand
+        # arg includes 'createdTime' — see resources.list call above).
+        created_at = ""
+        ct = getattr(r, "created_time", None)
+        if ct is not None:
+            try:
+                created_at = ct.isoformat()
+            except AttributeError:
+                created_at = str(ct)
         out.append({
             "resource_id": r.name,             # bucket/instance/db name
             "resource_type": rtype,
             "iam_role": principal_id,           # managed identity principal
-            "vpc_cidr": getattr(r, "location", "") or "",   # use region as
-                                                            # graph-grouping
-                                                            # axis (Azure
-                                                            # has no VPC-CIDR
-                                                            # equivalent at
-                                                            # the resource
-                                                            # listing level)
-            "created_at": (
-                r.created_time.isoformat()
-                if getattr(r, "created_time", None)
-                else ""
-            ),
+            "vpc_cidr": getattr(r, "location", "") or "",
+            "created_at": created_at,
         })
     return out
 
@@ -134,23 +139,22 @@ def _activity_log(sdk, credential, subscription_id: str,
     rid_set = {r.lower() for r in resource_ids}
     rows = []
     for ev in monitor.activity_logs.list(filter=filter_str):
-        # ev.resource_id is the full ARM ID. Fall back to resource name.
+        # ev.resource_id is the full ARM ID; ev.caller is a plain string;
+        # ev.operation_name is a LocalizableString with a .value attr.
+        # Verified against azure-mgmt-monitor v7 EventData model.
         full = (ev.resource_id or "").lower()
-        # Match any of our resource names appearing in the ARM ID.
         match = next((r for r in rid_set if r and r in full), None)
         if not match:
             continue
-        caller = (
-            getattr(ev.caller, "value", None)
-            if hasattr(ev.caller, "value")
-            else (ev.caller or "")
-        )
+        caller = ev.caller or ""   # always a string
+        op = ev.operation_name
+        op_name = getattr(op, "value", "") if op else ""
         rows.append({
             "resource_id": match,
             "signal_type": "cloudtrail_event",
             "user_identity": caller,
             "iam_role": caller,
-            "event_name": ev.operation_name.value if ev.operation_name else "",
+            "event_name": op_name,
             "source_account": subscription_id,
             "value": 1.0,
             "timestamp": (ev.event_timestamp.isoformat()
@@ -163,32 +167,33 @@ def _cost_series(sdk, credential, subscription_id: str,
                   resource_ids: list[str], days: int) -> list[dict]:
     """Cost Management `query` API, grouped by ResourceId.
 
-    Returns one cost row per (resource, day). Mirrors the CloudTrail "cost"
-    signal_type used by the AWS collector — daily granularity (Azure CM
+    Returns one cost row per (resource, day). Daily granularity (Azure CM
     doesn't expose hourly without a separate enrollment-export pipeline).
+    Uses the typed `QueryDefinition`/`QueryDataset`/etc. models — the SDK
+    rejects raw dicts on v4+.
     """
+    from azure.mgmt.costmanagement.models import (
+        QueryAggregation, QueryDataset, QueryDefinition, QueryGrouping,
+        QueryTimePeriod,
+    )
+
     cm = sdk["CostManagementClient"](credential)
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=days)
     scope = f"/subscriptions/{subscription_id}"
 
-    query = {
-        "type": "Usage",
-        "timeframe": "Custom",
-        "time_period": {
-            "from": start.isoformat(),
-            "to": end.isoformat(),
-        },
-        "dataset": {
-            "granularity": "Daily",
-            "aggregation": {
-                "totalCost": {"name": "PreTaxCost", "function": "Sum"},
+    query = QueryDefinition(
+        type="Usage",
+        timeframe="Custom",
+        time_period=QueryTimePeriod(from_property=start, to=end),
+        dataset=QueryDataset(
+            granularity="Daily",
+            aggregation={
+                "totalCost": QueryAggregation(name="PreTaxCost", function="Sum"),
             },
-            "grouping": [
-                {"type": "Dimension", "name": "ResourceId"},
-            ],
-        },
-    }
+            grouping=[QueryGrouping(type="Dimension", name="ResourceId")],
+        ),
+    )
     try:
         result = cm.query.usage(scope=scope, parameters=query)
     except Exception as e:
@@ -197,13 +202,15 @@ def _cost_series(sdk, credential, subscription_id: str,
 
     rid_set = {r.lower() for r in resource_ids}
     rows = []
-    for row in (result.rows or []):
-        # row format: [cost, day_int, currency, resource_id]
+    for row in (getattr(result, "rows", None) or []):
+        # Row layout depends on the columns returned by the query. With the
+        # grouping above, expect: [cost, day_int, currency, resource_id_full]
+        if len(row) < 4:
+            continue
         cost, day_int, _currency, rid_full = row[0], row[1], row[2], row[3]
-        rid_short = rid_full.split("/")[-1].lower()
+        rid_short = str(rid_full).split("/")[-1].lower()
         if rid_short not in rid_set:
             continue
-        # day_int is YYYYMMDD as int.
         day_str = str(day_int)
         ts = f"{day_str[:4]}-{day_str[4:6]}-{day_str[6:8]}T00:00:00+00:00"
         rows.append({
