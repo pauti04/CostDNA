@@ -2,7 +2,7 @@
  * TypeScript port of the 9 CostDNA agent tools (src/costdna/agent.py).
  *
  * Each tool runs against a pre-baked scan loaded from public/data/scan.json
- * — pure data lookups, no compute. The Anthropic agent loop in route.ts
+ * — pure data lookups, no compute. The OpenAI agent loop in route.ts
  * decides which to call based on the visitor's question.
  */
 
@@ -384,7 +384,8 @@ export function find_abandoned(
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Tool registry — Anthropic-format schemas
+// Tool registry — internal {name, description, input_schema} shape;
+// converted to OpenAI function-calling format in route.ts.
 // ─────────────────────────────────────────────────────────────────────
 
 export const TOOL_DEFINITIONS = [

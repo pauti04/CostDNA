@@ -46,6 +46,11 @@ validation, drop-CSV in-browser path.
 
 ### Changed
 
+- Python CLI agent migrated from Anthropic SDK (`claude-sonnet-4-5`) to
+  OpenAI SDK (`gpt-4o`, function-calling) so the local CLI and the live
+  demo run on the same backend. `OPENAI_API_KEY` replaces
+  `ANTHROPIC_API_KEY`; `pip install 'costdna[agent]'` now installs
+  `openai>=1.40` instead of `anthropic`.
 - Site redesigned to strict white + grey palette, 10 sections,
   alternating section backgrounds, big-number callouts.
 - Original 4-layer / hidden=16 GraphSAGE config preserved as default for

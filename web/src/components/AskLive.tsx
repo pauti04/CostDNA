@@ -169,7 +169,7 @@ export default function AskLive() {
           <div className="text-text-soft">
             <p className="mb-3">
               Ask anything about a synthetic AWS account with 68 resources across
-              4 teams. The agent has 9 tools and uses Claude under the hood.
+              4 teams. The agent has 10 tools and runs on GPT-4o.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
               {SUGGESTIONS.map((s) => (

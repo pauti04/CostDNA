@@ -9,13 +9,13 @@ natural-language questions about your cloud bill." Same backend pipeline
   > spike on Tue 16:00. Team ml's deploy at Tue 14:18 (commit a4f2c91, repo
   > ml-training-pipeline) is the most likely cause (Granger p=0.000).
 
-Architecture: Anthropic-style tool use. The LLM calls one of 5-6 tools
+Architecture: OpenAI function-calling. The LLM calls one of 10 tools
 that wrap CostDNA's existing functionality, then synthesizes a natural-
 language answer from the structured tool results.
 
 Setup:
-  pip install 'costdna[agent]'   (installs anthropic SDK)
-  export ANTHROPIC_API_KEY=...   (or pass --api-key)
+  pip install 'costdna[agent]'   (installs openai SDK)
+  export OPENAI_API_KEY=...      (or pass --api-key)
 """
 
 from __future__ import annotations
@@ -31,12 +31,12 @@ import pandas as pd
 
 log = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-5"
+DEFAULT_MODEL = "gpt-4o"
 
 
 # ────────────────────────────────────────────────────────────────────────
 # Tools — pure-Python functions the LLM can call.
-# Each tool gets a JSON schema so Claude knows how to invoke it.
+# Each tool gets a JSON schema so the model knows how to invoke it.
 # ────────────────────────────────────────────────────────────────────────
 
 
@@ -356,7 +356,7 @@ def tool_find_abandoned(
     }
 
 
-# Tool registry — JSON schemas for Claude.
+# Tool registry — JSON schemas for the LLM.
 TOOLS_SPEC = [
     {
         "name": "summarize_account",
@@ -553,78 +553,112 @@ class AgentReply:
 def ask(question: str, ctx: CostDnaContext, *, model: str = DEFAULT_MODEL,
         api_key: str | None = None, max_iterations: int = 6,
         history: list[dict] | None = None) -> AgentReply:
-    """Send a question to Claude with the CostDNA tools available; loop on
-    tool_use until the model produces a final answer.
+    """Send a question to the LLM with the CostDNA tools available; loop on
+    tool calls until the model produces a final answer.
 
-    `history`: optional prior messages list for multi-turn conversation.
-    Append the current question; the function returns a new history list
-    including the assistant's reply, ready to feed into the next call.
+    Uses OpenAI function-calling. `history` is an optional prior messages
+    list for multi-turn conversation — append the current question, and
+    the function returns a new history list including the assistant's
+    reply ready to feed into the next call.
     """
     try:
-        import anthropic
+        from openai import OpenAI
     except ImportError as e:
         raise ImportError(
-            "The agent requires anthropic. Install with: pip install 'costdna[agent]'"
+            "The agent requires openai. Install with: pip install 'costdna[agent]'"
         ) from e
 
-    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    api_key = api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "ANTHROPIC_API_KEY not set. Get one at https://console.anthropic.com/, "
-            "then `export ANTHROPIC_API_KEY=...` (or pass --api-key)."
+            "OPENAI_API_KEY not set. Get one at https://platform.openai.com/api-keys, "
+            "then `export OPENAI_API_KEY=...` (or pass --api-key)."
         )
 
-    client = anthropic.Anthropic(api_key=api_key)
-    messages: list[dict] = list(history or [])
+    # Translate our internal tool defs to OpenAI's function-calling
+    # shape. We keep the canonical defs in TOOLS_SPEC since they're cleaner
+    # to maintain; this is a one-shot conversion at call time.
+    openai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["input_schema"],
+            },
+        }
+        for t in TOOLS_SPEC
+    ]
+
+    client = OpenAI(api_key=api_key)
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Strip any system messages from incoming history to avoid duplicates.
+    for m in (history or []):
+        if m.get("role") != "system":
+            messages.append(m)
     messages.append({"role": "user", "content": question})
     tool_calls: list[dict] = []
 
     for _ in range(max_iterations):
-        resp = client.messages.create(
+        resp = client.chat.completions.create(
             model=model,
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS_SPEC,
             messages=messages,
+            tools=openai_tools,
+            tool_choice="auto",
         )
+        msg = resp.choices[0].message
 
-        # If the model is done thinking, return the answer.
-        if resp.stop_reason in ("end_turn", "stop_sequence"):
-            answer = "".join(b.text for b in resp.content if hasattr(b, "text"))
-            messages.append({"role": "assistant", "content": resp.content})
-            return AgentReply(answer=answer.strip(), tool_calls=tool_calls,
-                              raw_response={"id": resp.id, "model": resp.model},
-                              history=messages)
+        # OpenAI returns the assistant message with optional tool_calls.
+        # Append it to history regardless.
+        assistant_msg = {"role": "assistant", "content": msg.content or ""}
+        if msg.tool_calls:
+            assistant_msg["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in msg.tool_calls
+            ]
+        messages.append(assistant_msg)
 
-        # Otherwise it requested tool use. Execute and append tool_result blocks.
-        if resp.stop_reason == "tool_use":
-            messages.append({"role": "assistant", "content": resp.content})
-            tool_results = []
-            for block in resp.content:
-                if block.type != "tool_use":
-                    continue
-                tool_name = block.name
-                tool_args = dict(block.input)
-                fn = TOOL_REGISTRY.get(tool_name)
-                if fn is None:
-                    result = {"error": f"unknown tool {tool_name!r}"}
-                else:
-                    try:
-                        result = fn(ctx, **tool_args)
-                    except Exception as e:
-                        result = {"error": f"{type(e).__name__}: {e}"}
-                tool_calls.append({"tool": tool_name, "args": tool_args,
-                                    "result": result})
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": json.dumps(result, default=str),
-                })
-            messages.append({"role": "user", "content": tool_results})
-            continue
+        # No tool calls = final answer.
+        if not msg.tool_calls:
+            answer = (msg.content or "").strip()
+            return AgentReply(
+                answer=answer,
+                tool_calls=tool_calls,
+                raw_response={"id": resp.id, "model": resp.model},
+                history=[m for m in messages if m.get("role") != "system"],
+            )
 
-        # Unexpected stop reason — bail.
-        break
+        # Execute each requested tool and append a `tool` message per call.
+        for tc in msg.tool_calls:
+            if tc.type != "function":
+                continue
+            tool_name = tc.function.name
+            try:
+                tool_args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+            except json.JSONDecodeError:
+                tool_args = {}
+            fn = TOOL_REGISTRY.get(tool_name)
+            if fn is None:
+                result = {"error": f"unknown tool {tool_name!r}"}
+            else:
+                try:
+                    result = fn(ctx, **tool_args)
+                except Exception as e:
+                    result = {"error": f"{type(e).__name__}: {e}"}
+            tool_calls.append({"tool": tool_name, "args": tool_args, "result": result})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": json.dumps(result, default=str)[:8000],
+            })
 
     return AgentReply(
         answer="(agent ran out of iterations without producing a final answer)",

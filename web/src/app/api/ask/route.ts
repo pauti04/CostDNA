@@ -52,7 +52,7 @@ async function loadScan(req: Request): Promise<Scan> {
 }
 
 // OpenAI uses {type:"function", function:{name, description, parameters}}
-// while our tools.ts keeps the simpler Anthropic-shape definitions.
+// while our tools.ts keeps a simpler {name, description, input_schema} shape.
 const OPENAI_TOOLS: OpenAI.Chat.ChatCompletionTool[] = TOOL_DEFINITIONS.map((t) => ({
   type: "function",
   function: {

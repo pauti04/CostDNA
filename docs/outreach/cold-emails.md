@@ -127,7 +127,7 @@ Before each send:
 - [ ] Replace `{name}` with a real human's first name
 - [ ] Tweak the first sentence so it references something specific to that person (recent post, talk, blog) — recruiters notice
 - [ ] Make sure the URLs work (test them in an incognito tab)
-- [ ] Check Anthropic / OpenAI key is funded (if they click the demo)
+- [ ] Check OpenAI key is funded (if they click the demo)
 - [ ] Send from your personal email, not a Gmail you set up just for this
 
 ## Response handling

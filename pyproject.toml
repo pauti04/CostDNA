@@ -27,7 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 viz   = ["matplotlib>=3.8", "umap-learn>=0.5"]
 ui    = ["streamlit>=1.32"]
-agent = ["anthropic>=0.40"]
+agent = ["openai>=1.40"]
 dev   = ["pytest>=8.0", "ruff>=0.4"]
 # Multi-cloud: live collectors are implemented per official SDK patterns
 # but UNTESTED against live Azure/GCP accounts as of v0.2. AWS is the

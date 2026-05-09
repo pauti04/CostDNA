@@ -133,10 +133,10 @@ def _render_chat_tab(df, signals, metadata) -> None:
     )
 
     api_key = st.text_input(
-        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
         type="password",
-        help="Required to talk to Claude. Stays in your browser session — "
-             "never logged. Get one at console.anthropic.com.",
+        help="Required to talk to the model. Stays in your browser session — "
+             "never logged. Get one at platform.openai.com/api-keys.",
     )
 
     # Build the agent context once per scan.
@@ -184,7 +184,7 @@ def _render_chat_tab(df, signals, metadata) -> None:
 
     if q:
         if not api_key:
-            st.error("Paste your ANTHROPIC_API_KEY above first.")
+            st.error("Paste your OPENAI_API_KEY above first.")
             return
         st.session_state["chat_messages"].append({"role": "user", "content": q})
         with st.chat_message("user"):

@@ -30,7 +30,7 @@ Open-source agent that infers AWS resource ownership from behavioral patterns (C
 
 The most defensible thing about it: I caught **label leakage in two published cloud datasets** (Microsoft Azure 2.6M VMs, Philly 117K jobs) by auditing my own results before claiming them, and published the honest numbers alongside the inflated first-cut ones.
 
-**Stack:** Python · PyTorch + PyG · sentence-transformers · OpenAI/Anthropic SDKs · Next.js · Vercel · Terraform · Docker · GitHub Actions
+**Stack:** Python · PyTorch + PyG · sentence-transformers · OpenAI SDK · Next.js · Vercel · Terraform · Docker · GitHub Actions
 
 ---
 

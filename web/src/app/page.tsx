@@ -310,7 +310,7 @@ export default function Home() {
               {
                 num: "3",
                 title: "Ask",
-                body: "9-tool LLM agent (GPT-4o / Claude) answers natural-language questions. Tools are pure data lookups against the trained scan output — fast, deterministic, auditable.",
+                body: "10-tool LLM agent (GPT-4o, function-calling) answers natural-language questions. Tools are pure data lookups against the trained scan output — fast, deterministic, auditable.",
               },
             ].map((step, i) => (
               <FadeIn key={step.num} delay={i * 0.05}>
@@ -536,7 +536,7 @@ $ costdna serve
           <p className="mt-8 text-sm text-text-muted max-w-3xl">
             Setup for the agent commands:{" "}
             <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">pip install 'costdna[agent]'</code> +{" "}
-            <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">export ANTHROPIC_API_KEY=...</code>
+            <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">export OPENAI_API_KEY=...</code>
           </p>
         </div>
       </section>
@@ -550,7 +550,7 @@ $ costdna serve
               ["Python 3.11", "pandas, numpy, scikit-learn, statsmodels, networkx"],
               ["PyTorch 2.x + PyTorch Geometric", "GraphSAGE classifier — 2 to 4 layers, residual"],
               ["sentence-transformers", "MiniLM embeddings of IAM role names + resource IDs + tags"],
-              ["OpenAI + Anthropic SDKs", "tool-using agent loop — pluggable backend"],
+              ["OpenAI SDK", "function-calling agent loop — pluggable LLM backend"],
               ["boto3 (hardened)", "adaptive retry, throttle-aware CloudTrail lookup_events"],
               ["azure-mgmt-* + google-cloud-*", "multi-cloud collectors (lazy-loaded extras)"],
               ["Streamlit + Click + Rich", "CLI commands + interactive chat UI"],

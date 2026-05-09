@@ -35,7 +35,7 @@ Disable the leaking edges and honest GraphSAGE accuracy drops to 6.9% on Azure (
 
 **The methodological finding:** production cloud attribution is mostly a *metadata-lookup* problem. Deployment IDs, IAM principals, machine assignments — these encode ownership directly. Behavioral fingerprinting matters specifically when metadata is missing or unreliable, which is the gap CostDNA's synthetic environment is designed to reproduce (and where GraphSAGE hits 95%+ on hard cases that break feature-only baselines completely).
 
-**The product layer:** the agent has 9 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.). The LLM decides which to chain. GPT-4o on the live demo, Claude in the local CLI; backend is pluggable. Tools are pure data lookups against a pre-computed scan.
+**The product layer:** the agent has 9 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.). The LLM decides which to chain. GPT-4o (function-calling); backend is pluggable. Tools are pure data lookups against a pre-computed scan.
 
 Stack: Python 3.11, PyTorch + PyG, sentence-transformers (MiniLM for semantic features), boto3 (hardened collectors), Click + Rich for CLI, Next.js 14 for the web demo, Vercel for hosting, Terraform for the labeled test environment.
 

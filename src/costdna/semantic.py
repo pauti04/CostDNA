@@ -9,7 +9,7 @@ then expose the embedding as additional features. On real accounts, this is
 typically the dominant signal — IAM role naming conventions are the strongest
 team signal most accounts have.
 
-Why sentence-transformers and not the OpenAI/Anthropic API:
+Why sentence-transformers and not a hosted embeddings API:
 - Free, no API key, works offline
 - ~80MB model, runs on CPU in milliseconds
 - Good enough for naming-convention semantics

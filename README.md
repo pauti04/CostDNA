@@ -62,7 +62,7 @@ $ costdna ask "why did our bill spike Tuesday?" --from-dir runs/today
 ╰────────────────────────────────────────────────────────────────────────╯
 ```
 
-The agent has **9 tools** available — the LLM (GPT-4o on the [live demo](https://cost-dna.vercel.app), Claude in the local Python CLI; backend is pluggable) chains them to answer questions like:
+The agent has **10 tools** available — the LLM (GPT-4o, function-calling; LLM backend is pluggable) chains them to answer questions like:
 
 - *"Which 5 resources are racking up the most spend?"* → `top_spenders`
 - *"What does `i-9f8e7d` belong to?"* → `attribute_resource`
@@ -87,7 +87,7 @@ costdna chat --from-dir runs/today
 costdna serve   # then open the "💬 Chat with the agent" tab
 ```
 
-Setup: `pip install 'costdna[agent]'` + `export ANTHROPIC_API_KEY=...`.
+Setup: `pip install 'costdna[agent]'` + `export OPENAI_API_KEY=...`.
 
 > **[cost-dna.vercel.app](https://cost-dna.vercel.app)** — full landing page with the live agent, methodology, charts, and audit narrative.
 

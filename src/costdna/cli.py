@@ -739,10 +739,10 @@ def watch(state_dir, aws_profile, region, days, epochs, seed, labels_path,
               type=click.Path(exists=True, file_okay=False, path_type=Path),
               required=True,
               help="Directory of a previous `costdna scan --save-dir <dir>` run.")
-@click.option("--model", default="claude-sonnet-4-5", show_default=True,
-              help="Anthropic model name.")
+@click.option("--model", default="gpt-4o", show_default=True,
+              help="OpenAI model name.")
 @click.option("--api-key", "api_key", default=None,
-              help="ANTHROPIC_API_KEY (or set as env var).")
+              help="OPENAI_API_KEY (or set as env var).")
 @click.option("--show-tool-calls", is_flag=True,
               help="Print each tool the agent called and what it returned.")
 def ask(question, from_dir, model, api_key, show_tool_calls):
@@ -789,7 +789,7 @@ def ask(question, from_dir, model, api_key, show_tool_calls):
               type=click.Path(exists=True, file_okay=False, path_type=Path),
               required=True,
               help="Directory of a previous `costdna scan --save-dir <dir>` run.")
-@click.option("--model", default="claude-sonnet-4-5", show_default=True)
+@click.option("--model", default="gpt-4o", show_default=True)
 @click.option("--api-key", "api_key", default=None)
 def chat(from_dir, model, api_key):
     """Interactive multi-turn chat with the CostDNA agent.
