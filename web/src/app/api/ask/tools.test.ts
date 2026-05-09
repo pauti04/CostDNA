@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   attribute_resource,
   compare_teams,
+  find_abandoned,
   find_anomalies,
   find_cost_spikes,
   find_idle,
@@ -78,8 +79,8 @@ function makeScan(): Scan {
 }
 
 describe("TOOL_DEFINITIONS", () => {
-  it("exposes exactly 9 tools", () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(9);
+  it("exposes exactly 10 tools", () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(10);
   });
   it("each tool has name + description + input_schema", () => {
     for (const t of TOOL_DEFINITIONS) {
@@ -225,6 +226,93 @@ describe("find_idle", () => {
     expect(ids).toContain("lam-orph"); // only 2 events
     expect(ids).not.toContain("i-back-1"); // 30 events
     expect(out.n_idle).toBeGreaterThan(0);
+  });
+});
+
+describe("find_abandoned", () => {
+  function makeScanWithDecay(): Scan {
+    // Two resources:
+    //   abandoned-1: 10 events on 2026-04-01 (prior half), 0 on 2026-05-01 (recent)
+    //   active-1:    5 events 2026-04-01,                 8 events 2026-05-01
+    //   was-quiet-1: 2 events 2026-04-01,                 0 events 2026-05-01 — should be skipped (not enough prior)
+    const events = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        resource_id: "abandoned-1", signal_type: "cloudtrail_event",
+        event_name: "Invoke", iam_role: "ml-training-role",
+        timestamp: `2026-04-01 ${String(i).padStart(2, "0")}:00:00`, value: 1,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        resource_id: "active-1", signal_type: "cloudtrail_event",
+        event_name: "Invoke", iam_role: "backend-svc-role",
+        timestamp: `2026-04-01 ${String(i).padStart(2, "0")}:00:00`, value: 1,
+      })),
+      ...Array.from({ length: 8 }, (_, i) => ({
+        resource_id: "active-1", signal_type: "cloudtrail_event",
+        event_name: "Invoke", iam_role: "backend-svc-role",
+        timestamp: `2026-05-01 ${String(i).padStart(2, "0")}:00:00`, value: 1,
+      })),
+      ...Array.from({ length: 2 }, (_, i) => ({
+        resource_id: "was-quiet-1", signal_type: "cloudtrail_event",
+        event_name: "Invoke", iam_role: "data-pipeline-role",
+        timestamp: `2026-04-01 ${String(i).padStart(2, "0")}:00:00`, value: 1,
+      })),
+      // Cost rows so total_cost is non-zero for abandoned-1.
+      { resource_id: "abandoned-1", signal_type: "cost",
+        event_name: "", iam_role: "", value: 4.50, timestamp: "2026-04-01 00:00:00" },
+    ];
+    return {
+      predictions: [
+        { resource_id: "abandoned-1",  team_pred: "ml",      confidence: 0.9 },
+        { resource_id: "active-1",     team_pred: "backend", confidence: 0.95 },
+        { resource_id: "was-quiet-1",  team_pred: "data",    confidence: 0.7 },
+      ],
+      metadata: [],
+      signals: events,
+      deploys: [],
+      teams: ["backend", "data", "ml"],
+      summary: { total_resources: 3, total_signal_rows: events.length,
+                  n_teams: 3, model_test_acc: 0.9 },
+    };
+  }
+
+  it("surfaces resources whose activity collapsed", () => {
+    const out = find_abandoned(makeScanWithDecay(), {}) as {
+      abandoned: { resource_id: string; decay_ratio: number; total_cost: number }[];
+      n_abandoned: number;
+    };
+    const ids = out.abandoned.map((r) => r.resource_id);
+    expect(ids).toContain("abandoned-1");      // 10 -> 0 events = total decay
+    expect(ids).not.toContain("active-1");     // 5 -> 8 events = growing
+    expect(ids).not.toContain("was-quiet-1");  // never busy enough to qualify
+    expect(out.abandoned[0].decay_ratio).toBe(0);
+    expect(out.abandoned[0].total_cost).toBeCloseTo(4.50);
+  });
+
+  it("respects min_prior_events", () => {
+    // With min_prior_events=15, even abandoned-1 (only 10 prior events) shouldn't qualify.
+    const out = find_abandoned(makeScanWithDecay(), { min_prior_events: 15 }) as {
+      n_abandoned: number;
+    };
+    expect(out.n_abandoned).toBe(0);
+  });
+
+  it("respects decay_threshold", () => {
+    // With decay_threshold=0 (only resources with ZERO recent events qualify).
+    const out = find_abandoned(makeScanWithDecay(), { decay_threshold: 0 }) as {
+      abandoned: { resource_id: string; recent_events: number }[];
+    };
+    // abandoned-1 has 0 recent events, ratio=0, qualifies (0 ≤ 0).
+    expect(out.abandoned.find((r) => r.resource_id === "abandoned-1")?.recent_events).toBe(0);
+  });
+
+  it("handles empty signals gracefully", () => {
+    const empty: Scan = {
+      predictions: [], metadata: [], signals: [], deploys: [],
+      teams: [], summary: { total_resources: 0, total_signal_rows: 0, n_teams: 0, model_test_acc: 0 },
+    };
+    const out = find_abandoned(empty, {}) as { abandoned: unknown[]; note?: string };
+    expect(out.abandoned).toEqual([]);
+    expect(out.note).toContain("no cloudtrail events");
   });
 });
 

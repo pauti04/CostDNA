@@ -334,7 +334,7 @@ export default function Home() {
       {/* ────────── 9 TOOLS ────────── */}
       <section id="tools" className="bg-bg-section border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="05" title="9 tools the agent chains" />
+          <SectionHeader number="05" title="10 tools the agent chains" />
           <FadeIn>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
               Each tool wraps a piece of the underlying CostDNA pipeline. The LLM
@@ -353,6 +353,7 @@ export default function Home() {
               ["signal_history", "Recent CloudTrail events + cost samples for one resource."],
               ["find_idle", "Low-activity resources to consider for cleanup."],
               ["compare_teams", "Side-by-side comparison: counts, spend, top resources, by type."],
+              ["find_abandoned", "Resources whose activity has collapsed in the recent half of the window — likely abandoned. Sorted by spend."],
             ].map(([name, desc]) => (
               <div
                 key={name}

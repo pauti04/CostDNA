@@ -303,6 +303,86 @@ export function compare_teams(scan: Scan, args: { team_a: string; team_b: string
   return { team_a: stat(args.team_a), team_b: stat(args.team_b) };
 }
 
+export function find_abandoned(
+  scan: Scan,
+  args: { decay_threshold?: number; min_prior_events?: number },
+) {
+  /**
+   * "Abandoned" = a resource whose activity has collapsed in the most
+   * recent half of the observation window vs the prior half.
+   *
+   * decay_threshold (0-1, default 0.1): recent_events / prior_events
+   *   must be BELOW this ratio. Lower = stricter (only the most
+   *   abandoned-looking resources surface).
+   *
+   * min_prior_events (default 5): require this many events in the prior
+   *   half so we don't surface resources that were never busy in the first
+   *   place — those are "idle", not "abandoned" (use find_idle for those).
+   */
+  const decayThreshold = args.decay_threshold ?? 0.1;
+  const minPriorEvents = args.min_prior_events ?? 5;
+
+  // Find the time window from cloudtrail events.
+  const events = scan.signals.filter((s) => s.signal_type === "cloudtrail_event");
+  if (events.length === 0) {
+    return { abandoned: [], note: "no cloudtrail events to analyse" };
+  }
+  const timestamps = events.map((e) => e.timestamp).sort();
+  const earliest = new Date(timestamps[0]).getTime();
+  const latest = new Date(timestamps[timestamps.length - 1]).getTime();
+  const midpoint = (earliest + latest) / 2;
+
+  // Count events per resource in each half.
+  const prior = new Map<string, number>();
+  const recent = new Map<string, number>();
+  for (const e of events) {
+    const t = new Date(e.timestamp).getTime();
+    const m = t < midpoint ? prior : recent;
+    m.set(e.resource_id, (m.get(e.resource_id) ?? 0) + 1);
+  }
+
+  // Compute decay per resource.
+  const cost = costByResource(scan.signals);
+  const teamByRid = new Map(scan.predictions.map((p) => [p.resource_id, p.team_pred]));
+  const candidates: {
+    resource_id: string; team: string; prior_events: number;
+    recent_events: number; decay_ratio: number; total_cost: number;
+  }[] = [];
+
+  for (const p of scan.predictions) {
+    const priorN = prior.get(p.resource_id) ?? 0;
+    const recentN = recent.get(p.resource_id) ?? 0;
+    if (priorN < minPriorEvents) continue;
+    const ratio = recentN / priorN;
+    if (ratio > decayThreshold) continue;
+    candidates.push({
+      resource_id: p.resource_id,
+      team: teamByRid.get(p.resource_id) ?? "unknown",
+      prior_events: priorN,
+      recent_events: recentN,
+      decay_ratio: +ratio.toFixed(3),
+      total_cost: +(cost.get(p.resource_id) ?? 0).toFixed(2),
+    });
+  }
+
+  // Highest-spend abandoned resources first.
+  candidates.sort((a, b) => b.total_cost - a.total_cost);
+
+  const window_start = new Date(earliest).toISOString().slice(0, 10);
+  const window_mid = new Date(midpoint).toISOString().slice(0, 10);
+  const window_end = new Date(latest).toISOString().slice(0, 10);
+
+  return {
+    decay_threshold: decayThreshold,
+    min_prior_events: minPriorEvents,
+    window: { prior: `${window_start}..${window_mid}`,
+              recent: `${window_mid}..${window_end}` },
+    n_abandoned: candidates.length,
+    total_cost_abandoned: +candidates.reduce((s, c) => s + c.total_cost, 0).toFixed(2),
+    abandoned: candidates.slice(0, 20),
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Tool registry — Anthropic-format schemas
 // ─────────────────────────────────────────────────────────────────────
@@ -401,6 +481,29 @@ export const TOOL_DEFINITIONS = [
       required: ["team_a", "team_b"],
     },
   },
+  {
+    name: "find_abandoned",
+    description:
+      "Resources whose activity has collapsed in the most recent half of the " +
+      "observation window vs the prior half — likely abandoned. Different from " +
+      "find_idle (low activity throughout): find_abandoned surfaces resources " +
+      "that USED to be busy and aren't anymore. Returns the highest-spend " +
+      "abandoned resources first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        decay_threshold: {
+          type: "number",
+          description: "0-1; recent/prior event ratio must be below this. " +
+                       "Default 0.1 (90%+ activity drop).",
+        },
+        min_prior_events: {
+          type: "integer",
+          description: "Minimum events in the prior half to qualify. Default 5.",
+        },
+      },
+    },
+  },
 ];
 
 export function runTool(scan: Scan, name: string, args: any): unknown {
@@ -423,6 +526,8 @@ export function runTool(scan: Scan, name: string, args: any): unknown {
       return find_idle(scan, args);
     case "compare_teams":
       return compare_teams(scan, args);
+    case "find_abandoned":
+      return find_abandoned(scan, args);
     default:
       return { error: `unknown tool: ${name}` };
   }

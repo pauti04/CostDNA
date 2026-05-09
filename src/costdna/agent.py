@@ -284,6 +284,78 @@ def tool_compare_teams(ctx: CostDnaContext, team_a: str, team_b: str) -> dict:
     return {"team_a": stats(team_a), "team_b": stats(team_b)}
 
 
+def tool_find_abandoned(
+    ctx: CostDnaContext,
+    decay_threshold: float = 0.1,
+    min_prior_events: int = 5,
+) -> dict:
+    """Resources whose activity has collapsed in the recent half of the
+    observation window vs the prior half — likely abandoned.
+
+    Different from find_idle (low activity throughout): this surfaces
+    resources that USED to be busy and aren't anymore. Sorted by total
+    cost so the highest-spend abandoned ones come first.
+    """
+    if ctx.signals.empty:
+        return {"abandoned": [], "note": "No signal data available."}
+
+    events = ctx.signals[ctx.signals["signal_type"] == "cloudtrail_event"]
+    if events.empty:
+        return {"abandoned": [], "note": "No cloudtrail events to analyse."}
+
+    # Time window split.
+    ts = pd.to_datetime(events["timestamp"], utc=True, errors="coerce").dropna()
+    if ts.empty:
+        return {"abandoned": [], "note": "Could not parse timestamps."}
+    earliest, latest = ts.min(), ts.max()
+    midpoint = earliest + (latest - earliest) / 2
+
+    parsed = events.assign(_ts=pd.to_datetime(events["timestamp"], utc=True, errors="coerce"))
+    parsed = parsed.dropna(subset=["_ts"])
+    prior = parsed[parsed["_ts"] < midpoint].groupby("resource_id").size()
+    recent = parsed[parsed["_ts"] >= midpoint].groupby("resource_id").size()
+
+    cost_per_rid = {}
+    cost_rows = ctx.signals[ctx.signals["signal_type"] == "cost"]
+    if not cost_rows.empty:
+        cost_per_rid = cost_rows.groupby("resource_id")["value"].sum().to_dict()
+
+    team_by_rid = dict(zip(ctx.predictions["resource_id"],
+                            ctx.predictions["team_pred"]))
+
+    candidates = []
+    for rid in ctx.predictions["resource_id"]:
+        prior_n = int(prior.get(rid, 0))
+        recent_n = int(recent.get(rid, 0))
+        if prior_n < min_prior_events:
+            continue
+        ratio = recent_n / prior_n
+        if ratio > decay_threshold:
+            continue
+        candidates.append({
+            "resource_id":   rid,
+            "team":          team_by_rid.get(rid, "unknown"),
+            "prior_events":  prior_n,
+            "recent_events": recent_n,
+            "decay_ratio":   round(ratio, 3),
+            "total_cost":    round(float(cost_per_rid.get(rid, 0.0)), 2),
+        })
+
+    candidates.sort(key=lambda c: c["total_cost"], reverse=True)
+
+    return {
+        "decay_threshold": decay_threshold,
+        "min_prior_events": min_prior_events,
+        "window": {
+            "prior":  f"{earliest.date()}..{midpoint.date()}",
+            "recent": f"{midpoint.date()}..{latest.date()}",
+        },
+        "n_abandoned": len(candidates),
+        "total_cost_abandoned": round(sum(c["total_cost"] for c in candidates), 2),
+        "abandoned": candidates[:20],
+    }
+
+
 # Tool registry — JSON schemas for Claude.
 TOOLS_SPEC = [
     {
@@ -405,6 +477,28 @@ TOOLS_SPEC = [
             "required": ["team_a", "team_b"],
         },
     },
+    {
+        "name": "find_abandoned",
+        "description": "Resources whose activity has collapsed in the recent half "
+                       "of the window vs the prior half — likely abandoned. "
+                       "Different from find_idle (low activity throughout): "
+                       "find_abandoned surfaces resources that USED to be busy "
+                       "and aren't anymore. Sorted by spend.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "decay_threshold": {
+                    "type": "number", "default": 0.1,
+                    "description": "0-1; recent/prior event ratio must be below "
+                                   "this. Default 0.1 (90%+ activity drop).",
+                },
+                "min_prior_events": {
+                    "type": "integer", "default": 5,
+                    "description": "Minimum events in the prior half to qualify.",
+                },
+            },
+        },
+    },
 ]
 
 TOOL_REGISTRY: dict[str, Callable[..., dict]] = {
@@ -417,6 +511,7 @@ TOOL_REGISTRY: dict[str, Callable[..., dict]] = {
     "signal_history":      tool_signal_history,
     "find_idle":           tool_find_idle,
     "compare_teams":       tool_compare_teams,
+    "find_abandoned":      tool_find_abandoned,
 }
 
 
