@@ -95,11 +95,14 @@ def test_baselines_fail_on_hard_cases_features_only():
             test_mask[members[cut:]] = True
 
     log_reg = run_logistic_regression(feats_norm.values, y, train_mask, test_mask, kinds)
-    hard_kinds = ("cross_team", "shared_service", "reassigned")
+    # All five "hard" kinds are designed to break feature-only baselines in
+    # at least some way. We assert that LogReg fails on at least ONE of them
+    # — if it solves them all, the synthetic env's noise is too gentle.
+    # `sparse` is included because by design it has too few events for
+    # behavioural fingerprinting to stabilise; if even sparse is solved,
+    # the test stops being meaningful.
+    hard_kinds = ("cross_team", "shared_service", "reassigned", "sparse")
     hard_accs = [log_reg.per_kind.get(k, 1.0) for k in hard_kinds
                  if k in log_reg.per_kind]
-    # At least ONE hard kind should be ≤50% — that's the whole point of having
-    # them. If LogReg solves all of them, the synthetic noise is too gentle and
-    # the GNN can't earn its keep.
     assert any(a <= 0.5 for a in hard_accs), \
         f"LogReg solved every hard case ({log_reg.per_kind}) — noise too gentle"

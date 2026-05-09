@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from costdna.collectors._base import PROVIDERS, get_provider
+from costdna.collectors._base import get_provider
 
 
 # ------------------------------------------------------------------
@@ -70,7 +70,7 @@ def _fake_azure_event(resource_id, caller, op_value, when):
 
 def test_azure_list_resources_extracts_correct_fields():
     """Confirm _list_resources reads the right attributes off GenericResourceExpanded."""
-    from costdna.collectors.azure_live import AZURE_TYPE_MAP, _list_resources
+    from costdna.collectors.azure_live import _list_resources
 
     fake_rm_client = MagicMock()
     fake_rm_client.resources.list.return_value = [
@@ -154,7 +154,15 @@ def test_azure_activity_log_handles_none_op_name_and_caller():
 
 
 def test_azure_cost_query_uses_typed_models():
-    """The SDK rejects raw dicts on v4; ensure we build typed QueryDefinition."""
+    """The SDK rejects raw dicts on v4; ensure we build typed QueryDefinition.
+
+    Skipped if [azure] extras aren't installed — CI's bare-Python job has no
+    azure-mgmt-costmanagement, but the collector code still needs to be
+    correct, so this test is meaningful in any env where the extras are
+    present (developer laptop, [azure]-enabled CI matrix).
+    """
+    pytest.importorskip("azure.mgmt.costmanagement",
+                         reason="requires costdna[azure] extras")
     from azure.mgmt.costmanagement.models import QueryDefinition
 
     from costdna.collectors.azure_live import _cost_series
@@ -272,7 +280,7 @@ def test_gcp_audit_logs_skips_unknown_resources():
 def test_gcp_list_assets_filters_by_known_types():
     """ContentType.RESOURCE is enum value 1; asset_types filter excludes
     types not in GCP_TYPE_MAP."""
-    from costdna.collectors.gcp import GCP_TYPE_MAP, _list_assets
+    from costdna.collectors.gcp import _list_assets
 
     fake_asset = MagicMock()
     fake_asset.asset_type = "compute.googleapis.com/Instance"
@@ -286,10 +294,6 @@ def test_gcp_list_assets_filters_by_known_types():
     fake_client = MagicMock()
     fake_client.list_assets.return_value = [fake_asset]
 
-    captured = {}
-
-    def asset_service_client_ctor():
-        return fake_client
     fake_asset_service = MagicMock()
     fake_asset_service.AssetServiceClient.side_effect = lambda: fake_client
 
