@@ -59,17 +59,17 @@ export default function Home() {
                 Try the live demo →
               </a>
               <a
-                href={GH_URL}
-                target="_blank"
+                href="/your-account"
                 className="inline-flex items-center gap-2 bg-bg-section border border-border text-text font-medium px-6 py-3 rounded-md hover:border-border-strong transition"
               >
-                View on GitHub ↗
+                Run on your AWS bill →
               </a>
               <a
-                href="#audit"
+                href={GH_URL}
+                target="_blank"
                 className="inline-flex items-center gap-2 text-text-soft font-medium px-6 py-3 rounded-md hover:text-text transition"
               >
-                The audit story
+                View on GitHub ↗
               </a>
             </div>
           </FadeIn>
