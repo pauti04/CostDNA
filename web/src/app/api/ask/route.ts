@@ -133,6 +133,13 @@ export async function POST(req: Request) {
     { role: "user", content: question },
   ];
 
+  // Streaming opt-in via ?stream=1 query param. Non-streaming clients
+  // (including older versions of AskLive) still get the JSON-once response.
+  const wantsStream = new URL(req.url).searchParams.get("stream") === "1";
+  if (wantsStream) {
+    return streamingResponse({ client, scan, messages });
+  }
+
   const toolCalls: Array<{ tool: string; args: any; result: unknown }> = [];
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -192,4 +199,115 @@ export async function POST(req: Request) {
     },
     { status: 500 },
   );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────
+// Streaming response — NDJSON over a ReadableStream.
+//
+// Each chunk is a JSON object on its own line:
+//   {"type":"tool_call",   "tool":"x", "args":{...}}
+//   {"type":"tool_result", "tool":"x", "result":{...}}
+//   {"type":"answer_chunk","text":"..."}    (many of these for the final answer)
+//   {"type":"done",        "history":[...], "tool_calls":[...]}
+//   {"type":"error",       "message":"..."}
+//
+// Tool-calling iterations stay non-streaming (cleaner state machine);
+// only the final assistant text response is streamed token-by-token.
+// ─────────────────────────────────────────────────────────────────────
+async function streamingResponse(deps: {
+  client: OpenAI;
+  scan: Scan;
+  messages: OpenAI.Chat.ChatCompletionMessageParam[];
+}): Promise<Response> {
+  const { client, scan, messages } = deps;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => {
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      };
+      const toolCalls: Array<{ tool: string; args: any; result: unknown }> = [];
+
+      try {
+        for (let i = 0; i < MAX_ITERATIONS; i++) {
+          // Probe call first (non-streaming) to see if the model wants
+          // to call a tool or produce a final answer.
+          const probe = await client.chat.completions.create({
+            model: MODEL,
+            max_tokens: 1024,
+            messages,
+            tools: OPENAI_TOOLS,
+            tool_choice: "auto",
+          });
+          const msg = probe.choices[0]?.message;
+          if (!msg) break;
+          messages.push(msg as OpenAI.Chat.ChatCompletionMessageParam);
+
+          const calls = msg.tool_calls ?? [];
+          if (calls.length === 0) {
+            // Final answer iteration: re-issue with stream:true and emit
+            // chunks. To avoid double-billing, we use the content we already
+            // got (the probe call) and just stream-emulate it by sending
+            // it in chunks. This costs the same and is simpler than a
+            // second OpenAI call.
+            const text = (msg.content ?? "").trim();
+            // Chunk every ~3 words for a natural-feeling stream.
+            const words = text.split(/(\s+)/);
+            for (let w = 0; w < words.length; w += 3) {
+              const chunk = words.slice(w, w + 3).join("");
+              if (chunk) send({ type: "answer_chunk", text: chunk });
+              await new Promise((r) => setTimeout(r, 25));
+            }
+            send({
+              type: "done",
+              tool_calls: toolCalls,
+              history: messages.filter((m) => m.role !== "system"),
+            });
+            controller.close();
+            return;
+          }
+
+          // Tool-call iteration.
+          for (const tc of calls) {
+            if (tc.type !== "function") continue;
+            let args: any = {};
+            try {
+              args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+            } catch {
+              args = {};
+            }
+            send({ type: "tool_call", tool: tc.function.name, args });
+            const result = runTool(scan, tc.function.name, args);
+            toolCalls.push({ tool: tc.function.name, args, result });
+            send({ type: "tool_result", tool: tc.function.name, result });
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify(result).slice(0, 8000),
+            });
+          }
+        }
+
+        send({
+          type: "error",
+          message: "Agent ran out of iterations without a final answer.",
+        });
+        controller.close();
+      } catch (e: any) {
+        send({
+          type: "error",
+          message: `OpenAI API error: ${e?.status ?? "?"} ${e?.message ?? String(e)}`,
+        });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-store",
+    },
+  });
 }

@@ -37,7 +37,7 @@ export default function AskLive() {
     if (!question.trim() || busy) return;
     setBusy(true);
     setInput("");
-    const placeholder: Turn = { question, answer: "" };
+    const placeholder: Turn = { question, answer: "", toolCalls: [] };
     setTurns((t) => [...t, placeholder]);
 
     // Analytics — no-op if PostHog isn't configured.
@@ -52,33 +52,78 @@ export default function AskLive() {
     const t0 = performance.now();
 
     try {
-      const r = await fetch("/api/ask", {
+      // Streaming response — NDJSON, one JSON event per line.
+      const r = await fetch("/api/ask?stream=1", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, history: historyState }),
       });
-      const data = await r.json();
-      if (!r.ok) {
+
+      if (!r.ok || !r.body) {
+        // Likely a rate-limit or server error returned as JSON.
+        const data = await r.json().catch(() => ({ error: "request failed" }));
         track?.("question_failed", { status: r.status, error: data.error });
         setTurns((t) => {
-          const last = { ...t[t.length - 1], error: data.error || "request failed" };
+          const last = { ...t[t.length - 1], error: data.error || `HTTP ${r.status}` };
           return [...t.slice(0, -1), last];
         });
         return;
       }
-      setHistoryState(data.history);
-      setTurns((t) => {
-        const last = {
-          ...t[t.length - 1],
-          answer: data.answer,
-          toolCalls: data.tool_calls,
-        };
-        return [...t.slice(0, -1), last];
-      });
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let answerText = "";
+      const collectedTools: { tool: string; args: unknown; result?: unknown }[] = [];
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        // NDJSON: split on newline, keep the trailing partial.
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let ev: { type: string; [k: string]: unknown };
+          try { ev = JSON.parse(line); } catch { continue; }
+
+          if (ev.type === "tool_call") {
+            collectedTools.push({ tool: ev.tool as string, args: ev.args });
+            setTurns((t) => {
+              const last = { ...t[t.length - 1], toolCalls: [...collectedTools] };
+              return [...t.slice(0, -1), last];
+            });
+          } else if (ev.type === "tool_result") {
+            // Attach result to the most recent matching tool entry.
+            const idx = collectedTools.findIndex(
+              (c) => c.tool === ev.tool && c.result === undefined,
+            );
+            if (idx >= 0) collectedTools[idx].result = ev.result;
+          } else if (ev.type === "answer_chunk") {
+            answerText += ev.text as string;
+            setTurns((t) => {
+              const last = { ...t[t.length - 1], answer: answerText };
+              return [...t.slice(0, -1), last];
+            });
+          } else if (ev.type === "done") {
+            setHistoryState(ev.history as unknown[]);
+          } else if (ev.type === "error") {
+            const msg = ev.message as string;
+            track?.("question_failed", { error: msg });
+            setTurns((t) => {
+              const last = { ...t[t.length - 1], error: msg };
+              return [...t.slice(0, -1), last];
+            });
+            return;
+          }
+        }
+      }
+
       track?.("answer_received", {
         latency_ms: Math.round(performance.now() - t0),
-        n_tool_calls: (data.tool_calls || []).length,
-        answer_length: (data.answer || "").length,
+        n_tool_calls: collectedTools.length,
+        answer_length: answerText.length,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "network error";
