@@ -106,7 +106,7 @@ export default function Home() {
           <FadeIn delay={0.05}>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
               Chat with the agent over a synthetic 68-resource AWS account. The
-              agent has 9 tools — it picks which to chain based on your question,
+              agent has 10 tools — it picks which to chain based on your question,
               hits the GraphSAGE-attributed scan, and answers in plain English.
             </p>
           </FadeIn>
