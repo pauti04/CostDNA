@@ -82,7 +82,7 @@ cost spike at Wed 01:00. Team ml's deploy at Tue 23:28 (commit ae5a13c,
 repo ml-svc) is the most likely cause (Granger p=0.000).
 ```
 
-The agent has 9 tools — `summarize_account`, `attribute_resource`, `top_spenders`, `find_cost_spikes`, `find_anomalies`, etc. The LLM (GPT-4o (function-calling)) decides which to chain based on the question. This is the actual product — the GraphSAGE model is now an implementation detail.
+The agent has 10 tools — `summarize_account`, `attribute_resource`, `top_spenders`, `find_cost_spikes`, `find_anomalies`, etc. The LLM (GPT-4o (function-calling)) decides which to chain based on the question. This is the actual product — the GraphSAGE model is now an implementation detail.
 
 **Live demo: [cost-dna.vercel.app](https://cost-dna.vercel.app).** Synthetic 68-resource account. Click a suggestion, get a real answer with real dollars and resource IDs. ~$0.01/question on OpenAI's API.
 
@@ -96,7 +96,7 @@ The agent has 9 tools — `summarize_account`, `attribute_resource`, `top_spende
 
 ## What's in the repo
 
-- **9-tool LLM agent** — natural-language interface over the model's outputs
+- **10-tool LLM agent** — natural-language interface over the model's outputs
 - **GraphSAGE classifier** — 4-layer, residual, with a supervised contrastive head
 - **Behavioral feature extraction** — IAM patterns, VPC traffic, deploy timing, cost time-series shape
 - **LLM-derived semantic features** — sentence-transformer embeddings of role names + resource IDs

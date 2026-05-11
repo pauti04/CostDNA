@@ -12,7 +12,7 @@ Pick the variant that fits the tone of the rest of your resume.
 ### Variant B — product-first (lead with the live demo)
 
 > **CostDNA — open-source AWS cost-attribution agent** ([cost-dna.vercel.app](https://cost-dna.vercel.app) · [github.com/pauti04/CostDNA](https://github.com/pauti04/CostDNA))  
-> Open-source agent that infers AWS resource ownership from CloudTrail / IAM / cost-time-series behavior using a GraphSAGE GNN; LLM agent layer with 9 callable tools answers natural-language cost questions. Live demo runs on GPT-4o; 14-command Python CLI; Terraform-able test environment. Documented two label-leakage findings in published cloud datasets as part of the methodology.
+> Open-source agent that infers AWS resource ownership from CloudTrail / IAM / cost-time-series behavior using a GraphSAGE GNN; LLM agent layer with 10 callable tools answers natural-language cost questions. Live demo runs on GPT-4o; 14-command Python CLI; Terraform-able test environment. Documented two label-leakage findings in published cloud datasets as part of the methodology.
 
 ### Variant C — terse (one line, for resumes already crowded)
 
@@ -36,7 +36,7 @@ LinkedIn → your profile → "Add profile section" → "Recommended" → "Add f
 
 > Open-source agent that answers natural-language questions about AWS cloud cost attribution. Live demo at cost-dna.vercel.app — chat with the agent over a synthetic AWS account, no signup.
 >
-> The agent has 9 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.); GPT-4o decides which to chain based on the question. Tools query a pre-computed scan output from a behavioral GraphSAGE Graph Neural Network that infers resource ownership from CloudTrail events, IAM access patterns, VPC flow logs, and cost time-series shape.
+> The agent has 10 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.); GPT-4o decides which to chain based on the question. Tools query a pre-computed scan output from a behavioral GraphSAGE Graph Neural Network that infers resource ownership from CloudTrail events, IAM access patterns, VPC flow logs, and cost time-series shape.
 >
 > The most defensible thing in the project is methodological: I tested CostDNA on two production-scale public cloud datasets (Microsoft's 2.6M-VM Azure trace and Microsoft Philly's 117K-DL-job trace) and audited my own results. Both first-cut high-accuracy numbers turned out to be tautologies — `deployment_id` is 100% deterministic of `subscription_id` on Azure; `user_id` is 85% deterministic of `vc` on Philly. With the leaks removed, behavioral attribution is modest. The audit pattern itself is the contribution: production cloud attribution is mostly a metadata-lookup problem; behavioral fingerprinting matters specifically when metadata is missing or unreliable.
 >

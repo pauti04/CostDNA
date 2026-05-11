@@ -26,7 +26,7 @@ Live demo: **[cost-dna.vercel.app](https://cost-dna.vercel.app)**
 
 ![CostDNA agent answering with real per-team spend](https://raw.githubusercontent.com/pauti04/CostDNA/main/docs/images/live-demo.gif)
 
-Open-source agent that infers AWS resource ownership from behavioral patterns (CloudTrail, IAM, VPC flow, cost time-series) using a GraphSAGE GNN, then exposes the results as a chat interface with 9 callable tools.
+Open-source agent that infers AWS resource ownership from behavioral patterns (CloudTrail, IAM, VPC flow, cost time-series) using a GraphSAGE GNN, then exposes the results as a chat interface with 10 callable tools.
 
 The most defensible thing about it: I caught **label leakage in two published cloud datasets** (Microsoft Azure 2.6M VMs, Philly 117K jobs) by auditing my own results before claiming them, and published the honest numbers alongside the inflated first-cut ones.
 

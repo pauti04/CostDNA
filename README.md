@@ -69,6 +69,7 @@ The agent has **10 tools** available — the LLM (GPT-4o, function-calling; LLM 
 - *"Find the largest cost spikes and what caused them"* → `find_cost_spikes`
 - *"Which resources don't fit any team?"* → `find_anomalies`
 - *"Show me everything that hasn't been used in days"* → `find_idle`
+- *"What was active a month ago but went silent?"* → `find_abandoned`
 - *"Compare the ml team and the data team"* → `compare_teams`
 - *"What did `prod-rds-985438` do recently?"* → `signal_history`
 - *"Find anything with 'warehouse' in the name"* → `search_resources`
@@ -159,7 +160,7 @@ flowchart LR
     PRED[predictions.csv<br/>resource_id → team + confidence]
   end
 
-  subgraph agent["LLM agent (9 callable tools)"]
+  subgraph agent["LLM agent (10 callable tools)"]
     A[summarize_account<br/>top_spenders<br/>find_cost_spikes<br/>find_anomalies<br/>attribute_resource<br/>...]
   end
 

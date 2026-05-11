@@ -127,7 +127,7 @@ def _render_chat_tab(df, signals, metadata) -> None:
     """Conversational interface to the CostDNA agent."""
     st.subheader("Chat with the CostDNA agent")
     st.caption(
-        "The agent has access to 9 tools that query this scan. Ask anything: "
+        "The agent has access to 10 tools that query this scan. Ask anything: "
         "*'why did our bill spike Tuesday?'*, *'top 5 spenders on team ml'*, "
         "*'which resources don't fit any team?'*"
     )
