@@ -36,16 +36,21 @@ const MODEL = "gpt-4o";
 // good enough to soak up basic abuse). Keys are "ip:bucket".
 const seen = new Map<string, number>();
 
-// Scan is fetched from the deployment's own static-asset URL on first call
+// Scan is fetched from the deployment's static-asset URL on first call
 // (Vercel can't read public/ via fs and bundling 6MB+ of JSON breaks the build).
+//
+// We deliberately fetch from the public production alias (cost-dna.vercel.app)
+// rather than process.env.VERCEL_URL, because the per-deployment URL is gated
+// by Vercel's Deployment Protection (returns 401 to anonymous requests, including
+// same-origin server-to-server fetches from the function itself). The public
+// alias is always reachable, and the JSON file is identical across deployments.
+const SCAN_URL =
+  process.env.SCAN_URL || "https://cost-dna.vercel.app/data/scan.json";
+
 let scanCache: Scan | null = null;
-async function loadScan(req: Request): Promise<Scan> {
+async function loadScan(_req: Request): Promise<Scan> {
   if (scanCache) return scanCache;
-  const origin =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : new URL(req.url).origin;
-  const r = await fetch(`${origin}/data/scan.json`, { cache: "force-cache" });
+  const r = await fetch(SCAN_URL, { cache: "force-cache" });
   if (!r.ok) throw new Error(`scan fetch failed: ${r.status}`);
   scanCache = (await r.json()) as Scan;
   return scanCache;
