@@ -32,17 +32,26 @@ import {
  * behavioural feature for contrast.
  */
 function generateSampleCsv(): string {
-  const header = "deployment_id,subscription_id,cpu_avg,resource_type,team";
+  const header = "deployment_id,subscription_id,cpu_bucket,resource_type,team";
   const rows: string[] = [header];
   const teams = ["backend", "data", "ml", "platform"];
   const types = ["vm", "rds", "lambda", "s3"];
+  // cpu_bucket has only 4 distinct values across the 60 rows. By design each
+  // bucket appears in multiple subscriptions, so cpu_bucket does NOT
+  // deterministically encode subscription_id — that makes deployment_id the
+  // only column flagged by the default 0.85 threshold. (A previous version
+  // used cpu_avg as floats; the audit caught that too, but only because
+  // 60 rows was too small to repeat values — a noisy result that confused
+  // visitors. Bucketing keeps the demo's "look, only the leak fires" punch
+  // and is closer to how real cloud features actually look.)
+  const cpuBuckets = ["low", "medium", "high", "spike"];
   for (let d = 1; d <= 12; d++) {
     const sub = `sub-${["alpha", "beta", "gamma", "delta"][d % 4]}`;
     for (let r = 0; r < 5; r++) {
       rows.push([
         `dep-${d.toString().padStart(3, "0")}`,
         sub,
-        (0.2 + Math.random() * 0.7).toFixed(3),
+        cpuBuckets[(d + r * 3) % cpuBuckets.length],
         types[r % types.length],
         teams[(d + r) % teams.length],
       ].join(","));
@@ -242,17 +251,36 @@ export default function AuditChecker() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border bg-bg-section">
-                          {results.map((r) => (
-                            <tr key={r.column}>
-                              <td className="px-4 py-2.5 font-mono text-text">{r.column}</td>
-                              <td className="px-4 py-2.5 text-right font-mono text-text font-semibold">
-                                {(r.determinism * 100).toFixed(1)}%
-                              </td>
-                              <td className="px-4 py-2.5 text-right font-mono text-text-soft">
-                                {r.nDistinctValues.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
+                          {results.map((r) => {
+                            // High-cardinality flag: if a column has nearly
+                            // as many distinct values as rows, the 1:1
+                            // mapping may be coincidence (few values repeat
+                            // at all), not a structural leak. Surface this
+                            // so visitors don't misread the result.
+                            const highCardinality = rows!
+                              && r.nDistinctValues > 0.8 * rows!.length;
+                            return (
+                              <tr key={r.column}>
+                                <td className="px-4 py-2.5 font-mono text-text">
+                                  {r.column}
+                                  {highCardinality && (
+                                    <span
+                                      className="ml-2 text-[10px] uppercase tracking-wider text-text-muted"
+                                      title="High cardinality — the determinism may be coincidental on this dataset's small sample size, not a real structural leak."
+                                    >
+                                      ⓘ high-card
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2.5 text-right font-mono text-text font-semibold">
+                                  {(r.determinism * 100).toFixed(1)}%
+                                </td>
+                                <td className="px-4 py-2.5 text-right font-mono text-text-soft">
+                                  {r.nDistinctValues.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
