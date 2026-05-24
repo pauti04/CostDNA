@@ -19,6 +19,7 @@ simulation/logs/
 *.csv
 !examples/*.csv
 !docs/real-aws-evidence/*.csv
+!web/public/sample-cur.csv
 checkpoints/
 *.pt
 *.pth

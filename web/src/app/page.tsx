@@ -30,50 +30,72 @@ export default function Home() {
       {/* ────────── HERO ────────── */}
       <section className="relative bg-bg-section border-b border-border overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-60" aria-hidden />
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-20">
-          <FadeIn>
-            <div className="font-mono text-[11px] text-text-muted uppercase tracking-[0.25em] mb-6 flex items-center gap-3">
-              <span className="inline-block w-8 h-px bg-border-strong" />
-              Open source · methodology audit · GraphSAGE
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.05}>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] text-balance text-text max-w-4xl">
-              A 97% accuracy result.{" "}
-              <span className="gradient-text">Audited.</span>{" "}
-              It was a tautology.
-            </h1>
-          </FadeIn>
-          <FadeIn delay={0.12}>
-            <p className="mt-6 text-lg md:text-xl text-text-soft max-w-2xl text-balance leading-relaxed">
-              CostDNA is a behavioral GNN for cloud-resource attribution.
-              While evaluating on Microsoft&apos;s published 2.6M-VM Azure trace
-              I caught label leakage that inflated my own first-cut accuracy
-              from <em className="text-text">6.9%</em> to <em className="text-text">97%</em>.
-              The honest negative result became the project&apos;s strongest finding.
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.18}>
-            <div className="mt-10 flex flex-wrap gap-3">
-              <a
-                href="#audit"
-                className="inline-flex items-center gap-2 bg-bg-deep text-text-on-deep font-medium px-6 py-3 rounded-md hover:bg-bg-deep-soft transition"
-              >
-                Read the audit →
-              </a>
-              <a
-                href={GH_URL}
-                target="_blank"
-                className="inline-flex items-center gap-2 bg-bg-section border border-border text-text font-medium px-6 py-3 rounded-md hover:border-border-strong transition"
-              >
-                View on GitHub ↗
-              </a>
-              <a
-                href="#try"
-                className="inline-flex items-center gap-2 text-text-soft font-medium px-6 py-3 rounded-md hover:text-text transition"
-              >
-                Optional: chat with the agent →
-              </a>
+        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-20 grid lg:grid-cols-[1fr_auto] gap-12 items-center">
+          <div>
+            <FadeIn>
+              <div className="font-mono text-[11px] text-text-muted uppercase tracking-[0.25em] mb-6 flex items-center gap-3">
+                <span className="inline-block w-8 h-px bg-border-strong" />
+                Open source · methodology audit · GraphSAGE
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.05}>
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] text-balance text-text max-w-4xl">
+                A 97% accuracy result.{" "}
+                <span className="gradient-text">Audited.</span>{" "}
+                It was a tautology.
+              </h1>
+            </FadeIn>
+            <FadeIn delay={0.12}>
+              <p className="mt-6 text-lg md:text-xl text-text-soft max-w-2xl text-balance leading-relaxed">
+                CostDNA is a behavioral GNN for cloud-resource attribution.
+                While evaluating on Microsoft&apos;s published 2.6M-VM Azure trace
+                I caught label leakage that inflated my own first-cut accuracy
+                from <em className="text-text">6.9%</em> to <em className="text-text">97%</em>.
+                The honest negative result became the project&apos;s strongest finding.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.18}>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <a
+                  href="#audit"
+                  className="inline-flex items-center gap-2 bg-bg-deep text-text-on-deep font-medium px-6 py-3 rounded-md hover:bg-bg-deep-soft transition"
+                >
+                  Read the audit →
+                </a>
+                <a
+                  href={GH_URL}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 bg-bg-section border border-border text-text font-medium px-6 py-3 rounded-md hover:border-border-strong transition"
+                >
+                  View on GitHub ↗
+                </a>
+                <a
+                  href="#try"
+                  className="inline-flex items-center gap-2 text-text-soft font-medium px-6 py-3 rounded-md hover:text-text transition"
+                >
+                  Try the chat →
+                </a>
+              </div>
+            </FadeIn>
+          </div>
+          {/* Right column — audit chart. Hidden on mobile (chart needs width
+              to be readable; the body copy already conveys the numbers). */}
+          <FadeIn delay={0.22}>
+            <div className="hidden lg:block w-[420px]">
+              <div className="rounded-xl border border-border shadow-soft bg-bg overflow-hidden">
+                <Image
+                  src="/images/audit-hero.png"
+                  alt="The audit chart: 97% first-cut accuracy was a tautology; honest GraphSAGE accuracy after removing the leak is 6.9% on 100-class attribution, still 12× random."
+                  width={2400}
+                  height={1350}
+                  className="w-full h-auto"
+                  priority
+                />
+              </div>
+              <p className="mt-3 text-[11px] text-text-muted font-mono leading-snug">
+                Microsoft Azure 2.6M-VM trace · before/after the
+                deployment_id leak audit
+              </p>
             </div>
           </FadeIn>
         </div>

@@ -12,9 +12,10 @@ type Turn = {
 
 const SUGGESTIONS = [
   "Summarize this account.",
-  "Why did our bill spike Tuesday?",
   "Which 5 resources are spending the most?",
-  "Which resources don't fit any team?",
+  // Audit-themed: exercises find_anomalies. The methodology in 90 seconds.
+  "Show me the resources the model is unsure about.",
+  "Why did our bill spike Tuesday?",
 ];
 
 export default function AskLive() {
@@ -191,31 +192,47 @@ export default function AskLive() {
               <span className="text-accent">❯ </span>
               {t.question}
             </div>
-            {t.answer ? (
-              <div className="mt-2 text-text whitespace-pre-wrap">
-                {t.answer}
-                {t.toolCalls && t.toolCalls.length > 0 && (
-                  <details className="mt-3 text-xs text-text-soft">
-                    <summary className="cursor-pointer hover:text-text">
-                      🔧 {t.toolCalls.length} tool call
-                      {t.toolCalls.length === 1 ? "" : "s"}
-                    </summary>
-                    <ul className="mt-2 space-y-1 pl-4">
-                      {t.toolCalls.map((tc, j) => (
-                        <li key={j} className="font-mono">
-                          <span className="text-accent">{tc.tool}</span>
-                          <span className="text-text-soft">
-                            ({JSON.stringify(tc.args).slice(0, 120)})
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
+
+            {/* Tool calls — visible by default. Shows the agent's reasoning
+                inline rather than hiding it behind a click-to-expand. New
+                tool calls are appended live while streaming. */}
+            {t.toolCalls && t.toolCalls.length > 0 && (
+              <div className="mt-3 space-y-1.5 text-xs text-text-soft border-l-2 border-accent/40 pl-3">
+                {t.toolCalls.map((tc, j) => {
+                  const argStr = JSON.stringify(tc.args || {});
+                  const argDisplay = argStr === "{}" ? "" :
+                    argStr.length > 70 ? argStr.slice(0, 67) + "…" : argStr;
+                  return (
+                    <div key={j} className="font-mono flex items-baseline gap-2">
+                      <span className="text-accent">→</span>
+                      <span className="text-text">{tc.tool}</span>
+                      {argDisplay && (
+                        <span className="text-text-soft/70">
+                          {argDisplay}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {/* Streaming indicator while the answer is still being produced
+                    AND we have at least one tool call so far. Disappears once
+                    answerText starts arriving. */}
+                {!t.answer && !t.error && (
+                  <div className="font-mono text-text-soft/60 flex items-baseline gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-text-soft animate-pulse" />
+                    <span>chaining…</span>
+                  </div>
                 )}
+              </div>
+            )}
+
+            {t.answer ? (
+              <div className="mt-3 text-text whitespace-pre-wrap">
+                {t.answer}
               </div>
             ) : t.error ? (
               <div className="mt-2 text-bad">⚠ {t.error}</div>
-            ) : (
+            ) : t.toolCalls && t.toolCalls.length > 0 ? null /* indicator above */ : (
               <div className="mt-2 text-text-soft">
                 <span className="inline-block w-2 h-4 bg-text-soft animate-blink" />
                 <span className="ml-2 text-xs">thinking…</span>
