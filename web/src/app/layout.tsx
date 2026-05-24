@@ -7,21 +7,21 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "CostDNA — Ask your AWS bill questions in English",
+  title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
   description:
-    "A natural-language agent for cloud cost attribution. Production-tested on AWS (87% per-resource accuracy on a real account), methodology validated on Microsoft's 2.6M-VM Azure trace. Multi-cloud architecture, open source.",
+    "Behavioral GNN for cloud-resource attribution. While evaluating on Microsoft's published 2.6M-VM Azure trace I caught label leakage that inflated first-cut accuracy from 6.9% to 97%. The honest negative result became the project's strongest finding.",
   metadataBase: new URL("https://cost-dna.vercel.app"),
   alternates: { canonical: "/" },
   openGraph: {
-    title: "CostDNA — Ask your AWS bill questions in English",
+    title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
     description:
-      "Natural-language cloud-cost agent. 87% on real AWS, +53% lift over best baseline, multi-cloud architecture. Open source.",
+      "Behavioral GNN for cloud-resource attribution. Methodology audit caught label leakage in two published Microsoft cloud datasets. Open source.",
     images: [
       {
-        url: "/images/og-card.png",
-        width: 1200,
-        height: 630,
-        alt: "CostDNA — Ask your AWS bill questions in English",
+        url: "/images/audit-hero.png",
+        width: 2400,
+        height: 1350,
+        alt: "CostDNA audit chart — 97% first-cut accuracy became 6.9% honest after the deployment_id leak was excluded.",
       },
     ],
     type: "website",
@@ -30,21 +30,23 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CostDNA — Ask your AWS bill questions in English",
-    description: "Natural-language cloud-cost agent. 87% on real AWS. Open source.",
-    images: ["/images/og-card.png"],
+    title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
+    description:
+      "Caught label leakage in Microsoft's published 2.6M-VM Azure dataset. Open-source behavioral GNN + methodology audit.",
+    images: ["/images/audit-hero.png"],
   },
   keywords: [
-    "AWS cost attribution",
-    "FinOps",
+    "cloud-resource attribution",
+    "methodology audit",
+    "label leakage",
     "GraphSAGE",
     "Graph Neural Network",
-    "CloudTrail",
-    "cost allocation",
-    "cloud tagging",
-    "Cost Explorer",
-    "natural language agent",
-    "LLM",
+    "PyTorch Geometric",
+    "Microsoft Azure trace",
+    "FinOps",
+    "cost attribution",
+    "node2vec",
+    "machine learning research",
   ],
 };
 
