@@ -3,10 +3,16 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import clsx from "clsx";
 
+type ToolInvocation = {
+  tool: string;
+  args: unknown;
+  result?: unknown;        // populated when the tool_result event arrives
+};
+
 type Turn = {
   question: string;
   answer: string;
-  toolCalls?: { tool: string; args: any }[];
+  toolCalls?: ToolInvocation[];
   error?: string;
 };
 
@@ -15,7 +21,7 @@ const SUGGESTIONS = [
   "Which 5 resources are spending the most?",
   // Audit-themed: exercises find_anomalies. The methodology in 90 seconds.
   "Show me the resources the model is unsure about.",
-  "Why did our bill spike Tuesday?",
+  "Compare the ml team and the data team.",
 ];
 
 export default function AskLive() {
@@ -23,8 +29,10 @@ export default function AskLive() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [historyState, setHistoryState] = useState<unknown[] | null>(null);
+  const [warm, setWarm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new turns.
   useEffect(() => {
@@ -33,6 +41,27 @@ export default function AskLive() {
       behavior: "smooth",
     });
   }, [turns, busy]);
+
+  // Warm-up: fire a GET /api/ask as soon as the chat scrolls into view, so
+  // the first POST doesn't pay the ~3-6s Vercel cold-start penalty.
+  // Fire-and-forget; the visitor never sees this.
+  useEffect(() => {
+    if (warm || !containerRef.current) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setWarm(true);
+          fetch("/api/ask", { method: "GET" }).catch(() => {
+            // Warm-up failures are silent. Next POST will retry.
+          });
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "400px" },   // trigger before the chat is fully on-screen
+    );
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, [warm]);
 
   async function send(question: string) {
     if (!question.trim() || busy) return;
@@ -75,7 +104,17 @@ export default function AskLive() {
       const decoder = new TextDecoder();
       let buf = "";
       let answerText = "";
-      const collectedTools: { tool: string; args: unknown; result?: unknown }[] = [];
+      const collectedTools: ToolInvocation[] = [];
+
+      // Helper to push a fresh snapshot of `collectedTools` into the turn,
+      // so React re-renders when results come in (mutating the array in
+      // place wouldn't trigger a re-render).
+      const flushTools = () => {
+        setTurns((t) => {
+          const last = { ...t[t.length - 1], toolCalls: collectedTools.map((c) => ({ ...c })) };
+          return [...t.slice(0, -1), last];
+        });
+      };
 
       while (true) {
         const { value, done } = await reader.read();
@@ -91,16 +130,16 @@ export default function AskLive() {
 
           if (ev.type === "tool_call") {
             collectedTools.push({ tool: ev.tool as string, args: ev.args });
-            setTurns((t) => {
-              const last = { ...t[t.length - 1], toolCalls: [...collectedTools] };
-              return [...t.slice(0, -1), last];
-            });
+            flushTools();
           } else if (ev.type === "tool_result") {
             // Attach result to the most recent matching tool entry.
             const idx = collectedTools.findIndex(
               (c) => c.tool === ev.tool && c.result === undefined,
             );
-            if (idx >= 0) collectedTools[idx].result = ev.result;
+            if (idx >= 0) {
+              collectedTools[idx].result = ev.result;
+              flushTools();
+            }
           } else if (ev.type === "answer_chunk") {
             answerText += ev.text as string;
             setTurns((t) => {
@@ -145,7 +184,7 @@ export default function AskLive() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-bg-card overflow-hidden shadow-sm">
+    <div ref={containerRef} className="rounded-xl border border-border bg-bg-card overflow-hidden shadow-sm">
       {/* Title bar — keeps the dark "terminal" aesthetic on a light page */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-bg-soft">
         <div className="flex gap-1.5">
@@ -173,16 +212,34 @@ export default function AskLive() {
               4 teams. The agent has 10 tools and runs on GPT-4o.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-              {SUGGESTIONS.map((s) => (
+              {SUGGESTIONS.map((s, i) => (
                 <button
                   key={s}
                   onClick={() => void send(s)}
-                  className="text-left text-xs px-3 py-2 rounded-md bg-bg-soft border border-border hover:border-accent hover:text-accent transition"
+                  className={clsx(
+                    "text-left text-xs px-3 py-2 rounded-md border transition",
+                    // Highlight the audit-themed seed (index 2) — that's the
+                    // one that lands the methodology in 90 seconds.
+                    i === 2
+                      ? "bg-accent/10 border-accent/40 text-text hover:bg-accent/20 hover:border-accent"
+                      : "bg-bg-soft border-border hover:border-accent hover:text-accent",
+                  )}
                 >
+                  {i === 2 && (
+                    <span className="text-[10px] uppercase tracking-wider text-accent font-semibold mr-2">
+                      audit
+                    </span>
+                  )}
                   {s}
                 </button>
               ))}
             </div>
+            <p className="mt-4 text-[11px] text-text-muted">
+              ⓘ The agent picks tools live and chains them. Each call shows
+              inline. Click any{" "}
+              <code className="font-mono text-text-soft bg-bg-soft px-1 rounded">▸ expand</code>{" "}
+              to see the raw structured response.
+            </p>
           </div>
         )}
 
@@ -193,23 +250,29 @@ export default function AskLive() {
               {t.question}
             </div>
 
-            {/* Tool calls — visible by default. Shows the agent's reasoning
-                inline rather than hiding it behind a click-to-expand. New
-                tool calls are appended live while streaming. */}
+            {/* Tool calls — visible by default. Each call renders with its
+                args inline, and (once the tool_result event arrives) a small
+                expandable panel with a peek of the structured response. The
+                visitor can see exactly what data the agent worked with. */}
             {t.toolCalls && t.toolCalls.length > 0 && (
-              <div className="mt-3 space-y-1.5 text-xs text-text-soft border-l-2 border-accent/40 pl-3">
+              <div className="mt-3 space-y-2 text-xs text-text-soft border-l-2 border-accent/40 pl-3">
                 {t.toolCalls.map((tc, j) => {
                   const argStr = JSON.stringify(tc.args || {});
                   const argDisplay = argStr === "{}" ? "" :
                     argStr.length > 70 ? argStr.slice(0, 67) + "…" : argStr;
                   return (
-                    <div key={j} className="font-mono flex items-baseline gap-2">
-                      <span className="text-accent">→</span>
-                      <span className="text-text">{tc.tool}</span>
-                      {argDisplay && (
-                        <span className="text-text-soft/70">
-                          {argDisplay}
-                        </span>
+                    <div key={j}>
+                      <div className="font-mono flex items-baseline gap-2">
+                        <span className="text-accent">→</span>
+                        <span className="text-text">{tc.tool}</span>
+                        {argDisplay && (
+                          <span className="text-text-soft/70">
+                            {argDisplay}
+                          </span>
+                        )}
+                      </div>
+                      {tc.result !== undefined && (
+                        <ToolResultPeek result={tc.result} />
                       )}
                     </div>
                   );
@@ -272,4 +335,78 @@ export default function AskLive() {
       </form>
     </div>
   );
+}
+
+
+/**
+ * Renders a compact peek of a tool's structured response. Default is a
+ * 1-line summary ("→ 12 anomalies, top: i-d8a3 (conf=0.42)"); a click
+ * expands to a pretty-printed JSON dump.
+ *
+ * Per-tool summary heuristics live in `summarizeResult` — kept short so the
+ * inline view stays scannable rather than swallowing the chat panel.
+ */
+function ToolResultPeek({ result }: { result: unknown }) {
+  const summary = summarizeResult(result);
+  return (
+    <details className="mt-1 pl-5 group">
+      <summary className="cursor-pointer text-text-soft/80 hover:text-text font-mono text-[11px] flex items-baseline gap-2 list-none">
+        <span className="text-accent/60">←</span>
+        <span className="truncate">{summary}</span>
+        <span className="ml-auto text-text-muted/50 text-[10px] group-open:hidden">▸ expand</span>
+        <span className="ml-auto text-text-muted/50 text-[10px] hidden group-open:inline">▾ collapse</span>
+      </summary>
+      <pre className="mt-2 p-3 bg-bg/40 border border-border rounded text-[11px] font-mono text-text-soft overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
+        {prettyJson(result)}
+      </pre>
+    </details>
+  );
+}
+
+
+function summarizeResult(result: unknown): string {
+  if (result === null || result === undefined) return "(no result)";
+  if (typeof result !== "object") return String(result).slice(0, 80);
+  const r = result as Record<string, unknown>;
+
+  // find_anomalies: surface count + top anomaly's resource_id + confidence
+  if (Array.isArray(r.anomalies)) {
+    const arr = r.anomalies as Array<{ resource_id?: string; confidence?: number }>;
+    const top = arr[0];
+    return arr.length === 0
+      ? "0 anomalies"
+      : `${arr.length} anomalies, top: ${top?.resource_id} (conf=${top?.confidence?.toFixed(2)})`;
+  }
+  // top_spenders: show count + max spend
+  if (Array.isArray(r.resources)) {
+    const arr = r.resources as Array<{ resource_id?: string; total_cost?: number }>;
+    if (arr.length > 0 && arr[0].total_cost !== undefined) {
+      return `${arr.length} resources, top: ${arr[0].resource_id} ($${arr[0].total_cost?.toFixed(2)})`;
+    }
+    return `${arr.length} resources`;
+  }
+  // summarize_account / compare_teams: count teams
+  if (Array.isArray(r.by_team)) {
+    const arr = r.by_team as Array<{ team?: string; resources?: number }>;
+    return `${arr.length} teams: ${arr.map((t) => `${t.team}(${t.resources})`).join(", ")}`;
+  }
+  // attribute_resource: single resource
+  if (typeof r.predicted_team === "string") {
+    return `team=${r.predicted_team}, conf=${(r.confidence as number)?.toFixed(2) ?? "?"}`;
+  }
+  // search_resources / find_idle / find_abandoned: list with count
+  if (Array.isArray(r.matches)) {
+    return `${(r.matches as unknown[]).length} matches`;
+  }
+  // Fallback — just the top-level keys
+  return `{${Object.keys(r).slice(0, 5).join(", ")}${Object.keys(r).length > 5 ? ", …" : ""}}`;
+}
+
+
+function prettyJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }

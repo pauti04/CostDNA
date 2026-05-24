@@ -80,6 +80,36 @@ function getClientIp(req: Request): string {
   );
 }
 
+// GET /api/ask — used as a warm-up ping from the client.
+//
+// Vercel serverless functions go cold after ~5-10 min of inactivity. The
+// first POST after that pays a ~3-6s cold-start penalty (Node boot +
+// scan.json fetch + parse). The AskLive component fires this GET as soon
+// as the chat section scrolls into view; by the time the visitor types
+// a question, the function is warm and the scan is cached in-process.
+export async function GET(req: Request) {
+  try {
+    const start = Date.now();
+    await loadScan(req);   // populates the in-memory scanCache
+    return new Response(
+      JSON.stringify({
+        status: "warm",
+        model: MODEL,
+        scan_cached: scanCache !== null,
+        warmup_ms: Date.now() - start,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  } catch (e: unknown) {
+    // Don't surface scan-fetch failures to the visitor here; warm-up is
+    // fire-and-forget. The next POST will retry the load.
+    return new Response(
+      JSON.stringify({ status: "warm", note: "warmup-noop" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}
+
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return Response.json(

@@ -2,6 +2,7 @@ import Image from "next/image";
 import CodeBlock from "@/components/CodeBlock";
 import FadeIn from "@/components/FadeIn";
 import AskLive from "@/components/AskLive";
+import ExampleConversation from "@/components/ExampleConversation";
 
 const GH_URL = "https://github.com/pauti04/CostDNA";
 
@@ -584,8 +585,18 @@ export default function Home() {
             </p>
           </FadeIn>
 
-          <FadeIn delay={0.15}>
-            <details className="bg-bg rounded-lg border border-border p-6 max-w-4xl">
+          {/* Pre-baked example conversations — what the chat looks like
+              with content. Static so a visitor who scrolls past without
+              typing still sees an interaction shape. */}
+          <FadeIn delay={0.12}>
+            <h3 className="text-sm uppercase tracking-wider text-text-muted font-mono mb-4">
+              Example transcripts
+            </h3>
+            <ExampleConversation />
+          </FadeIn>
+
+          <FadeIn delay={0.18}>
+            <details className="mt-8 bg-bg rounded-lg border border-border p-6 max-w-4xl">
               <summary className="cursor-pointer font-semibold text-text">
                 The 10 tools (click to expand)
               </summary>
@@ -741,6 +752,58 @@ $ costdna serve
               </a>
             </div>
           </FadeIn>
+        </div>
+      </section>
+
+      {/* ────────── BUILT BY ────────── */}
+      <section className="bg-bg-section border-t border-border">
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="grid md:grid-cols-[auto_1fr] gap-8 items-start max-w-4xl">
+            <div className="w-24 h-24 rounded-full bg-bg-deep text-text-on-deep flex items-center justify-center font-mono text-3xl font-bold">
+              PA
+            </div>
+            <div>
+              <h3 className="text-2xl font-semibold text-text mb-3">
+                Built by Parth Auti
+              </h3>
+              <p className="text-text-soft leading-relaxed mb-4">
+                I write ML and infrastructure code — graph neural networks for
+                cloud-cost attribution most recently, but anything where
+                methodology matters more than headline numbers. CostDNA is the
+                project I&apos;d most like to be remembered for: a behavioural GNN
+                that caught label leakage in two published Microsoft cloud
+                datasets, with the audit methodology checked into the repo as
+                a reusable function.
+              </p>
+              <p className="text-text-soft leading-relaxed mb-6">
+                I&apos;m currently looking for full-time roles in{" "}
+                <b className="text-text">cloud-cost / FinOps / ML-infra</b>.
+                If this is the kind of work your team does, I&apos;d like to chat.
+              </p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <a
+                  href="https://github.com/pauti04"
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-bg text-text hover:border-text transition"
+                >
+                  GitHub ↗
+                </a>
+                <a
+                  href="mailto:parth.auti@gmail.com"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-bg text-text hover:border-text transition"
+                >
+                  Email
+                </a>
+                <a
+                  href={`${GH_URL}/blob/main/docs/blog-post-audit.md`}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-bg text-text hover:border-text transition"
+                >
+                  Read the audit writeup ↗
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
