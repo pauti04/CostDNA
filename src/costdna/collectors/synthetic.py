@@ -18,6 +18,12 @@ interesting:
                     Hard to fingerprint with little data.
   cross_team      — used roughly equally by two teams. Label = the team whose
                     role created the resource (control plane wins).
+  decoy           — adversarial: graph edges (IAM role, VPC, flows) say team B,
+                    but ~85% of behavioural events come from team A's role /
+                    peak-hour / verb mix. Feature-only models predict A;
+                    graph methods should still predict B. Used to validate
+                    that GraphSAGE is exploiting structural signal, not just
+                    feature overlap.
 
 Output schema matches collectors.aws so downstream code is source-agnostic.
 """
@@ -108,14 +114,20 @@ def _resource_id(rtype: str, kind: str, idx: int, rng: random.Random) -> str:
 
 
 def _resource(team: str, rtype: str, idx: int, kind: str, rng: random.Random,
-              reassigned_from: str | None = None) -> dict:
+              reassigned_from: str | None = None,
+              decoy_for: str | None = None) -> dict:
     profile = PROFILES[team]
     return {
         "resource_id": _resource_id(rtype, kind, idx, rng),
         "resource_type": rtype,
         "team": team,                       # ground truth label
-        "kind": kind,                       # clean / shared_service / reassigned / sparse / cross_team
+        "kind": kind,                       # clean / shared_service / reassigned / sparse / cross_team / decoy
         "reassigned_from": reassigned_from, # only set for kind=reassigned
+        # `decoy_for` names the team whose behavioural fingerprint
+        # (peak_hour, calling-role mix) dominates this resource's events.
+        # Ground-truth ownership is still `team`; the graph edges (IAM role,
+        # VPC, flows) point to `team`. Only the behavioural signal lies.
+        "decoy_for": decoy_for,
         "iam_role": _role_for(team, rtype, rng),
         "vpc_cidr": profile.vpc_cidr,
         "created_at": (datetime.now(timezone.utc)
@@ -241,6 +253,20 @@ def _resources(rng: random.Random, n_clean_per_type: int) -> list[dict]:
     for i in range(3):
         primary = rng.choice(non_platform)
         out.append(_resource(primary, "ec2", i, "cross_team", rng))
+
+    # 4b. Decoy (adversarial): graph edges + IAM role say team B, but the
+    # behavioural events look ~85% like team A. The right answer for a
+    # graph-aware model is team B; feature-only models will predict A.
+    # If GraphSAGE doesn't beat LogReg on these, the message-passing isn't
+    # earning its complexity. Small absolute counts because every decoy
+    # contradicts the model's feature inputs deliberately.
+    decoy_pairs = [
+        ("ml", "data"),       # ml-owned, behaves like data (batch overnight)
+        ("backend", "ml"),    # backend-owned, behaves like ml (bursty)
+        ("data", "backend"),  # data-owned, behaves like backend (steady weekday)
+    ]
+    for i, (owner, mimic) in enumerate(decoy_pairs):
+        out.append(_resource(owner, "ec2", i, "decoy", rng, decoy_for=mimic))
 
     # 5. Unowned: the realistic mess. These don't belong to any team.
     # The model should give them low confidence; the anomaly detector should
@@ -368,6 +394,14 @@ def _events_for_resource(r: dict, days: int, rng: random.Random) -> list[dict]:
             active_team = r["team"]
         active_profile = PROFILES[active_team]
 
+        # Decoy: behavioural signal mimics `decoy_for` (team A), even though
+        # the resource is owned by `team` (team B). The active_profile and
+        # the caller-team distribution below are dominated by team A; only
+        # the graph edges (IAM role, VPC, flows) still point to team B.
+        if r["kind"] == "decoy" and r.get("decoy_for"):
+            active_team = r["decoy_for"]
+            active_profile = PROFILES[active_team]
+
         if is_weekend:
             n_calls = int(base_calls_per_day * active_profile.weekend_ratio * 2)
         else:
@@ -383,6 +417,15 @@ def _events_for_resource(r: dict, days: int, rng: random.Random) -> list[dict]:
                 caller_team = rng.choice([t for t in TEAMS if t != active_team])
             elif r["kind"] == "cross_team" and rng.random() < 0.70:
                 caller_team = rng.choice([t for t in TEAMS if t != active_team])
+            elif r["kind"] == "decoy":
+                # 85% of callers come from team A (the mimicked team); 15%
+                # leak through as team B (the true owner). Hits the audit's
+                # 0.85 threshold from the other direction — feature-only
+                # models will lock onto team A.
+                if rng.random() < 0.15:
+                    caller_team = r["team"]
+                else:
+                    caller_team = r["decoy_for"] or active_team
             elif r["team"] == "platform" and rng.random() < 0.65:
                 caller_team = rng.choice([t for t in TEAMS if t != "platform"])
 

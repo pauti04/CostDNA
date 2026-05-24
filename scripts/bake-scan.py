@@ -86,9 +86,12 @@ def main() -> None:
     }
 
     def _strict(o):
-        if isinstance(o, dict):  return {k: _strict(v) for k, v in o.items()}
-        if isinstance(o, list):  return [_strict(v) for v in o]
-        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)): return None
+        if isinstance(o, dict):
+            return {k: _strict(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [_strict(v) for v in o]
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+            return None
         return o
 
     out_path = Path("web/public/data/scan.json")

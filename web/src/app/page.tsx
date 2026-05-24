@@ -288,10 +288,10 @@ export default function Home() {
                 </thead>
                 <tbody className="divide-y divide-border bg-bg-section">
                   {[
-                    ["5",   "20%",   "31.3% ± 0.8%", "28.6% ± 3.2%", "20.0% ± 2.0%", "pending", "34.6% ± 1.6%"],
-                    ["10",  "10%",   "18.3% ± 0.3%", "17.3% ± 0.1%", "10.0% ± 1.9%", "pending", "22.4% ± 1.6%"],
-                    ["25",  "4%",    "9.2% ± 0.8%",  "10.0% ± 0.3%", "4.0% ± 0.2%",  "pending", "10.6% ± 0.0%"],
-                    ["100", "1%",    "3.4% ± 0.1%",  "3.8% ± 0.2%",  "1.0% ± 0.0%",  "pending", "6.9% ± 0.5%"],
+                    ["5",   "20%",   "33.3% ± 1.9%", "31.2% ± 3.2%", "19.1% ± 0.4%", "33.3% ± 1.9%", "38.0% ± 3.3%"],
+                    ["10",  "10%",   "17.3% ± 1.4%", "16.2% ± 1.3%", "9.2% ± 0.6%",  "17.3% ± 1.4%", "20.7% ± 1.0%"],
+                    ["25",  "4%",    "pending",      "pending",      "pending",      "pending",      "pending"],
+                    ["100", "1%",    "pending",      "pending",      "pending",      "pending",      "pending"],
                   ].map((row) => (
                     <tr key={row[0]}>
                       <td className="px-4 py-3 font-medium text-text">{row[0]}</td>
@@ -309,11 +309,7 @@ export default function Home() {
           </FadeIn>
           <FadeIn delay={0.10}>
             <p className="mt-6 text-sm text-text-muted max-w-3xl leading-relaxed">
-              The node2vec column on Azure is pending re-run with the new baseline
-              harness — see <a href={`${GH_URL}/blob/main/docs/v2/results-phase2.md`} className="underline" target="_blank">docs/v2/results-phase2.md</a> for the synthetic-env
-              node2vec results (92.6% ± 4.2%, ties LogReg). The synthetic results
-              show GraphSAGE earns its complexity specifically on the hardest
-              kinds (cross_team, reassigned) rather than dominating overall.
+              Locally-staged dataset has 10 subscriptions; N=25/100 cells stay pending until the full 100-subscription trace is restaged. Reproduction at <a href={`${GH_URL}/blob/main/scripts/bench-azure.py`} className="underline" target="_blank">scripts/bench-azure.py</a>. The run also surfaced a <b className="text-text">second leak</b> the audit module caught in real time — see <a href={`${GH_URL}/blob/main/docs/v2/azure-benchmark.md`} className="underline" target="_blank">docs/v2/azure-benchmark.md</a> (vpc_cidr was 100% deterministic of subscription_id; excluded from the graph before re-running).
             </p>
           </FadeIn>
         </div>

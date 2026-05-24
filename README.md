@@ -78,14 +78,28 @@ Prior published work in cloud-resource attribution typically reports accuracy in
 
 GraphSAGE consistently outperforms feature-only baselines after the leak is removed, but absolute numbers are modest because the Azure trace ships only summary CPU statistics (max/avg/p95), not the hourly time-series the GNN would benefit from.
 
-| N teams | Random | LogReg       | k-NN         | LabelProp    | node2vec+LR  | **GraphSAGE** |
-|---------|--------|--------------|--------------|--------------|--------------|---------------|
-| 5       | 20%    | 31.3% ± 0.8% | 28.6% ± 3.2% | 20.0% ± 2.0% | _pending_¹   | **34.6% ± 1.6%** |
-| 10      | 10%    | 18.3% ± 0.3% | 17.3% ± 0.1% | 10.0% ± 1.9% | _pending_¹   | **22.4% ± 1.6%** |
-| 25      | 4%     | 9.2% ± 0.8%  | 10.0% ± 0.3% | 4.0% ± 0.2%  | _pending_¹   | **10.6% ± 0.0%** |
-| 100     | 1%     | 3.4% ± 0.1%  | 3.8% ± 0.2%  | 1.0% ± 0.0%  | _pending_¹   | **6.9% ± 0.5%**  |
+| N teams | Random | Majority      | LogReg       | k-NN         | LabelProp    | node2vec+LR  | **GraphSAGE** |
+|---------|--------|---------------|--------------|--------------|--------------|--------------|---------------|
+| 5       | 20%    | 17.7% ± 0.5%  | 33.3% ± 1.9% | 31.2% ± 3.2% | 19.1% ± 0.4% | 33.3% ± 1.9% | **38.0% ± 3.3%** |
+| 10      | 10%    | 8.7% ± 0.4%   | 17.3% ± 1.4% | 16.2% ± 1.3% | 9.2% ± 0.6%  | 17.3% ± 1.4% | **20.7% ± 1.0%** |
+| 25      | 4%     | _pending_¹    | _pending_¹   | _pending_¹   | _pending_¹   | _pending_¹   | _pending_¹       |
+| 100     | 1%     | _pending_¹    | _pending_¹   | _pending_¹   | _pending_¹   | _pending_¹   | _pending_¹       |
 
-¹ node2vec column on Azure pending re-run with the new baseline harness. See [`docs/v2/results-phase2.md`](docs/v2/results-phase2.md) for the synthetic-env node2vec results and the gap analysis.
+¹ Locally-staged Azure dataset at `runs/azure-1/` has 10 subscriptions; N=25/50/100 cells stay pending until the full 100-subscription trace is restaged. Reproduction script for N=5 and N=10: [`scripts/bench-azure.py`](scripts/bench-azure.py). Full writeup of the run + the second leak it caught in real time: [`docs/v2/azure-benchmark.md`](docs/v2/azure-benchmark.md).
+
+### A second leak, caught in real time
+
+The first pass of the re-run scored LabelProp at 98% — the same suspicious number that had originally triggered the audit. Running `find_deterministic_edges()` on the metadata before training surfaced the issue:
+
+```python
+>>> from costdna.audit import find_deterministic_edges
+>>> find_deterministic_edges(metadata, target_col="team",
+...     candidate_edge_cols=["resource_type", "kind", "iam_role",
+...                          "vpc_cidr", "created_at"])
+{'vpc_cidr': 1.0, 'created_at': 0.8815545959284392}
+```
+
+`vpc_cidr` was 100% deterministic of subscription — a second leak, same pattern as the original `deployment_id → subscription_id`. With VPC edges excluded from the graph, behavioral attribution on Azure is modest but honest (GraphSAGE ~2× random at N=5–10). **This is the methodology working in real time**: the audit module that documents the original finding catches the same pattern on a different feature, on the same dataset, two months later.
 
 **Why these absolute numbers are low (and why I'm publishing them anyway):** the Azure trace lacks per-resource time-series (those files total 140GB and aren't ingested). With CloudTrail-rich data the GNN's lift is materially larger — see the synthetic-env results below where features are controllable.
 

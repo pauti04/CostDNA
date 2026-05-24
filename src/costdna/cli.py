@@ -843,6 +843,91 @@ def chat(from_dir, model, api_key):
         turn += 1
 
 
+@main.command("self-eval")
+@click.argument("baseline_dir", type=click.Path(exists=True, file_okay=False,
+                                                path_type=Path))
+@click.argument("current_dir", type=click.Path(exists=True, file_okay=False,
+                                               path_type=Path))
+@click.option("--labels", "labels_path", required=True,
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Ground-truth labels CSV (resource_id, team).")
+@click.option("--markdown/--rich", default=False,
+              help="Emit Slack/Discord-flavoured markdown instead of a rich "
+                   "console table (the default).")
+@click.option("--exit-on-degradation", is_flag=True,
+              help="Exit code 1 if the overall accuracy delta is statistically "
+                   "significant and negative. Useful for cron / CI.")
+def self_eval_cmd(baseline_dir: Path, current_dir: Path,
+                  labels_path: Path, markdown: bool,
+                  exit_on_degradation: bool) -> None:
+    """Compare two scan runs against ground-truth labels; report accuracy drift.
+
+    Closes the loop on production deployments: drift detection
+    (`costdna diff`) catches changes in *what* the model predicts;
+    self-eval catches changes in *whether the predictions are correct*.
+
+    Expected layout:
+
+    \b
+      baseline_dir/predictions.csv   # earlier scan
+      current_dir/predictions.csv    # latest scan
+      labels.csv                     # ground-truth (resource_id, team)
+
+    The Wilson 95% confidence intervals are sized for the small label
+    sets typical in early-stage deployments. A `--exit-on-degradation`
+    flag returns non-zero when the overall delta CI excludes zero on
+    the wrong side — making this suitable to wire into a daily cron.
+    """
+    from costdna.self_eval import run_self_eval
+
+    rep = run_self_eval(baseline_dir, current_dir, labels_path)
+
+    if markdown:
+        click.echo(rep.as_markdown())
+    else:
+        marker = "[yellow]⚠[/] " if rep.significant_change else ""
+        sign = "+" if rep.overall_delta >= 0 else ""
+        console.print()
+        console.print(
+            f"  {marker}[bold]{rep.baseline_run}[/] → "
+            f"[bold]{rep.current_run}[/]   "
+            f"({rep.n_labels} labels)"
+        )
+        console.print(
+            f"  Overall: [bold]{rep.baseline_overall.accuracy:.1%}[/]"
+            f" → [bold]{rep.current_overall.accuracy:.1%}[/]"
+            f"   ({sign}{rep.overall_delta:+.1%})"
+        )
+        if rep.significant_change:
+            console.print(
+                "  [yellow]This change is statistically significant "
+                "(95% CI of delta excludes 0).[/]"
+            )
+        console.print()
+        from rich.table import Table
+        t = Table(show_header=True, header_style="bold")
+        t.add_column("Team")
+        t.add_column("Baseline", justify="right")
+        t.add_column("Current", justify="right")
+        t.add_column("Δ", justify="right")
+        for cur, base in zip(rep.per_team_current, rep.per_team_baseline):
+            delta = cur.accuracy - base.accuracy
+            delta_color = (
+                "green" if delta > 0.05 else
+                "red" if delta < -0.05 else "white"
+            )
+            t.add_row(
+                cur.team,
+                f"{base.accuracy:.1%} ({base.n_correct}/{base.n_labeled})",
+                f"{cur.accuracy:.1%} ({cur.n_correct}/{cur.n_labeled})",
+                f"[{delta_color}]{delta:+.1%}[/]",
+            )
+        console.print(t)
+
+    if exit_on_degradation and rep.significant_change and rep.overall_delta < 0:
+        sys.exit(1)
+
+
 @main.command()
 @click.option("--port", default=8501, show_default=True,
               help="Port for the Streamlit web UI.")

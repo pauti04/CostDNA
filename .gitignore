@@ -36,3 +36,4 @@ checkpoints/
 .claude/
 *.swp
 .DS_Store
+reproduce/

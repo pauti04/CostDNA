@@ -1,0 +1,73 @@
+{
+  "seeds": [
+    7,
+    42,
+    911
+  ],
+  "results": {
+    "5": [
+      {
+        "model": "Majority",
+        "test_acc_mean": 0.1767,
+        "test_acc_std": 0.0047
+      },
+      {
+        "model": "LogReg",
+        "test_acc_mean": 0.3333,
+        "test_acc_std": 0.0189
+      },
+      {
+        "model": "k-NN(k=5)",
+        "test_acc_mean": 0.3122,
+        "test_acc_std": 0.0318
+      },
+      {
+        "model": "LabelProp",
+        "test_acc_mean": 0.1911,
+        "test_acc_std": 0.0042
+      },
+      {
+        "model": "node2vec+LR",
+        "test_acc_mean": 0.3333,
+        "test_acc_std": 0.0189
+      },
+      {
+        "model": "GraphSAGE",
+        "test_acc_mean": 0.38,
+        "test_acc_std": 0.0334
+      }
+    ],
+    "10": [
+      {
+        "model": "Majority",
+        "test_acc_mean": 0.0867,
+        "test_acc_std": 0.0036
+      },
+      {
+        "model": "LogReg",
+        "test_acc_mean": 0.1728,
+        "test_acc_std": 0.0138
+      },
+      {
+        "model": "k-NN(k=5)",
+        "test_acc_mean": 0.1622,
+        "test_acc_std": 0.0131
+      },
+      {
+        "model": "LabelProp",
+        "test_acc_mean": 0.0917,
+        "test_acc_std": 0.0062
+      },
+      {
+        "model": "node2vec+LR",
+        "test_acc_mean": 0.1728,
+        "test_acc_std": 0.0138
+      },
+      {
+        "model": "GraphSAGE",
+        "test_acc_mean": 0.2067,
+        "test_acc_std": 0.0098
+      }
+    ]
+  }
+}

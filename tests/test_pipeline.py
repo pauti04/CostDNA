@@ -66,6 +66,53 @@ def test_train_runs_and_beats_random(epochs):
         f"test_acc={result.test_acc:.3f} — signal too weak (baseline={baseline:.3f})"
 
 
+def test_decoy_kind_is_generated_with_correct_metadata():
+    """The decoy kind is the adversarial case for issue #6: graph says B,
+    behaviour says A, ground-truth label is B. Validate the generator
+    produces decoys with the expected `decoy_for` field set to a
+    different team than `team`."""
+    signals, metadata, flows, _ = generate_synthetic_signals(
+        n_per_type_per_team=3, days=7, seed=99,
+    )
+    decoys = metadata[metadata["kind"] == "decoy"]
+    assert len(decoys) >= 3, (
+        f"expected ≥3 decoys, got {len(decoys)} (synthetic env mis-configured)"
+    )
+    for _, row in decoys.iterrows():
+        assert row["decoy_for"] is not None, (
+            f"decoy resource {row['resource_id']} has no decoy_for set"
+        )
+        assert row["decoy_for"] != row["team"], (
+            "decoy_for must name a team OTHER than the owning team — "
+            "otherwise it's not adversarial"
+        )
+
+    # Pull events for the first decoy and verify the caller-team distribution
+    # is dominated by decoy_for (team A), not team (team B). This is the
+    # behavioural-vs-structural disagreement the kind models. Roles use
+    # industry-style prefixes that don't literally contain the team name —
+    # backend roles are 'apicore-*', data are 'etl-*', ml are 'mlops-*',
+    # platform are 'devops-*'.
+    from costdna.collectors.synthetic import PROFILES
+
+    first = decoys.iloc[0]
+    rid = first["resource_id"]
+    events = signals[signals["resource_id"] == rid]
+    assert not events.empty, f"decoy {rid} has no events"
+    roles = events["iam_role"].fillna("").tolist()
+    target_team = first["decoy_for"]
+    target_pool = set(PROFILES[target_team].role_pool)
+    n_target = sum(1 for r in roles if r in target_pool)
+    n_total = len(roles)
+    # We set decoy callers to come from team A 85% of the time. Allow some
+    # slop because of finite-sample noise. Floor at 0.5 — anything below
+    # that means the decoy isn't actually mimicking team A meaningfully.
+    assert n_target / max(1, n_total) >= 0.5, (
+        f"decoy {rid} should have ≥50% callers from team {target_team!r}; "
+        f"got {n_target}/{n_total} ({100*n_target/n_total:.0f}%)"
+    )
+
+
 def test_baselines_fail_on_hard_cases_features_only():
     """LogReg/k-NN should solve clean cases but fail on cross_team — that's
     the whole reason we need the GNN."""

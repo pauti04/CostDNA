@@ -244,11 +244,26 @@ def run_node2vec(
     # concatenation lines up with the input arrays.
     pos_of = {nid: i for i, nid in enumerate(node_ids)}
 
-    # Edge-case: graph with no edges. Fall back to features-only LogReg so the
-    # baseline still produces a defensible row in the comparison table rather
-    # than crashing. Exercised by tiny test fixtures, not production runs.
+    # Edge-case: graph with no edges. Fall back to features-only LogReg so
+    # the baseline still produces a defensible row in the comparison table
+    # rather than crashing. Exercised by tiny test fixtures AND by the Azure
+    # post-audit benchmark, where iam_role in signals is empty and vpc_cidr
+    # has been excluded as a leaking edge (audit findings on real data).
+    #
+    # Preserve the node2vec+LR name so the column header in downstream
+    # tables stays aligned — the result here is mathematically identical
+    # to LogReg, but the naming flags that this row came from the node2vec
+    # code path with an empty graph (which IS the honest "node2vec on this
+    # graph" answer when the graph contributes nothing).
     if graph.number_of_edges() == 0:
-        return run_logistic_regression(features, labels, train_mask, test_mask, kinds)
+        fallback = run_logistic_regression(features, labels, train_mask,
+                                            test_mask, kinds)
+        return BaselineResult(
+            name="node2vec+LR",
+            train_acc=fallback.train_acc, test_acc=fallback.test_acc,
+            predictions=fallback.predictions, confidences=fallback.confidences,
+            per_kind=fallback.per_kind,
+        )
 
     rng = np.random.default_rng(seed)
     eff_walk_length = max(2, walk_length)

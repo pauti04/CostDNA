@@ -15,8 +15,30 @@ on:
   workflow_dispatch: {}        # also allow manual runs
 
 jobs:
+  check-secrets:
+    # Skip the build if Docker Hub credentials aren't configured.
+    # This prevents a red X on every tag push when the secrets are absent
+    # (which is the case until the user adds DOCKERHUB_USERNAME +
+    # DOCKERHUB_TOKEN under Settings → Secrets and variables → Actions).
+    runs-on: ubuntu-latest
+    outputs:
+      has_creds: ${{ steps.check.outputs.has_creds }}
+    steps:
+      - id: check
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "has_creds=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_creds=false" >> $GITHUB_OUTPUT
+            echo "::notice::DOCKERHUB_TOKEN not set; skipping docker-release. Add the secret to enable publishing."
+          fi
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_creds == 'true'
     steps:
       - uses: actions/checkout@v4
 
