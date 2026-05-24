@@ -1,24 +1,24 @@
-# Resume bullet + LinkedIn project entry
+# Resume bullet + LinkedIn project entry — audit-first
 
 ## Resume bullet
 
 Pick the variant that fits the tone of the rest of your resume.
 
-### Variant A — audit-first (lead with the methodological win)
+### Variant A — audit-first (recommended — lead with the methodological finding)
 
-> **CostDNA — open-source AWS cost-attribution agent** ([cost-dna.vercel.app](https://cost-dna.vercel.app) · [github.com/pauti04/CostDNA](https://github.com/pauti04/CostDNA))  
-> Built a natural-language agent that infers AWS resource ownership from behavioral patterns using a GraphSAGE GNN + LLM-derived semantic features. Self-audited and documented label leakage in two published cloud datasets (Microsoft Azure 2.6M VMs, Microsoft Philly 117K DL jobs), publishing honest behavioral accuracy alongside inflated first-cut numbers. Stack: Python, PyTorch + PyG, sentence-transformers, OpenAI SDK, Next.js, Vercel, Terraform, Docker.
+> **CostDNA — open-source behavioral GNN for cloud-resource attribution** ([cost-dna.vercel.app](https://cost-dna.vercel.app) · [github.com/pauti04/CostDNA](https://github.com/pauti04/CostDNA))
+> Trained a GraphSAGE classifier on Microsoft's published 2.6M-VM Azure trace. Caught a 100%-deterministic label-leakage pattern (`deployment_id ≡ subscription_id` across all 33,205 deployments) that had been inflating first-cut accuracy from 6.9% to 97%. Reported the honest behavioral number alongside the inflated one and proposed a two-line `pandas` audit as a methodology standard. Confirmed the same pattern in Microsoft Philly's 117K-job trace. Compared against node2vec / DeepWalk, feature-only LogReg, k-NN, and LabelProp baselines; documented limitations and adversarial failure modes. Stack: Python, PyTorch + PyG, gensim, sentence-transformers, scikit-learn, statsmodels, Terraform, Docker.
 
-### Variant B — product-first (lead with the live demo)
+### Variant B — engineering-first (lead with the deliverable, audit as the bullet)
 
-> **CostDNA — open-source AWS cost-attribution agent** ([cost-dna.vercel.app](https://cost-dna.vercel.app) · [github.com/pauti04/CostDNA](https://github.com/pauti04/CostDNA))  
-> Open-source agent that infers AWS resource ownership from CloudTrail / IAM / cost-time-series behavior using a GraphSAGE GNN; LLM agent layer with 10 callable tools answers natural-language cost questions. Live demo runs on GPT-4o; 14-command Python CLI; Terraform-able test environment. Documented two label-leakage findings in published cloud datasets as part of the methodology.
+> **CostDNA — open-source GraphSAGE GNN for cloud-resource attribution** ([cost-dna.vercel.app](https://cost-dna.vercel.app) · [github.com/pauti04/CostDNA](https://github.com/pauti04/CostDNA))
+> Behavioral attribution model + 10-tool function-calling agent layer. Hardened multi-cloud collectors (AWS production-tested at 13/15 = 87% on a Terraform-provisioned environment; Azure methodology-evaluated on a 2.6M-VM published trace; GCP implemented per SDK patterns). Caught and documented label leakage in two published cloud datasets as part of the evaluation. Stack: Python 3.11, PyTorch + PyG, gensim (node2vec), sentence-transformers, OpenAI SDK, Next.js, Vercel, Terraform, Docker.
 
 ### Variant C — terse (one line, for resumes already crowded)
 
-> **CostDNA** ([cost-dna.vercel.app](https://cost-dna.vercel.app)): open-source AWS cost-attribution agent. GraphSAGE GNN + LLM tool-calling layer. Audited 2 published cloud datasets for label leakage; published honest behavioral accuracy. Python / PyTorch / Next.js / Terraform.
+> **CostDNA** ([cost-dna.vercel.app](https://cost-dna.vercel.app)): open-source behavioral GNN for cloud-resource attribution. Caught label leakage in 2 published Microsoft cloud datasets; published honest behavioral baselines including node2vec. Python / PyTorch / PyG / Terraform.
 
-**Recommendation: variant A.** Recruiters at FinOps companies will recognize "label leakage in Microsoft Azure trace" instantly. That's the line that survives skimming.
+**Recommendation: Variant A.** Recruiters at FinOps companies will recognize "label leakage in Microsoft Azure trace" instantly. That's the line that survives skimming. Variant B is the right fallback if the target role is more engineering-than-research.
 
 ---
 
@@ -26,7 +26,7 @@ Pick the variant that fits the tone of the rest of your resume.
 
 LinkedIn → your profile → "Add profile section" → "Recommended" → "Add featured / Add projects".
 
-**Title:** CostDNA — natural-language agent for AWS cost attribution
+**Title:** CostDNA — methodology audit on published cloud-attribution datasets
 
 **Associated with:** (leave blank — personal project)
 
@@ -34,46 +34,57 @@ LinkedIn → your profile → "Add profile section" → "Recommended" → "Add f
 
 **Description:**
 
-> Open-source agent that answers natural-language questions about AWS cloud cost attribution. Live demo at cost-dna.vercel.app — chat with the agent over a synthetic AWS account, no signup.
+> Open-source behavioral graph neural network for cloud-resource attribution. Live demo at cost-dna.vercel.app.
 >
-> The agent has 10 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.); GPT-4o decides which to chain based on the question. Tools query a pre-computed scan output from a behavioral GraphSAGE Graph Neural Network that infers resource ownership from CloudTrail events, IAM access patterns, VPC flow logs, and cost time-series shape.
+> The technical contribution isn't the model — it's a methodology audit. While evaluating on Microsoft's published 2.6M-VM Azure trace, I caught a 100%-deterministic label-leakage pattern: across all 33,205 deployments in the dataset, `deployment_id` mapped 1:1 to `subscription_id`, so any graph method using that edge was doing a database join rather than learning. First-cut accuracy: 97%. With the leak removed, honest GraphSAGE accuracy on 100-class attribution: 6.9% — still 12× random, still beats every non-graph baseline including node2vec, but a long way from 97%.
 >
-> The most defensible thing in the project is methodological: I tested CostDNA on two production-scale public cloud datasets (Microsoft's 2.6M-VM Azure trace and Microsoft Philly's 117K-DL-job trace) and audited my own results. Both first-cut high-accuracy numbers turned out to be tautologies — `deployment_id` is 100% deterministic of `subscription_id` on Azure; `user_id` is 85% deterministic of `vc` on Philly. With the leaks removed, behavioral attribution is modest. The audit pattern itself is the contribution: production cloud attribution is mostly a metadata-lookup problem; behavioral fingerprinting matters specifically when metadata is missing or unreliable.
+> Confirmed the same pattern on Microsoft Philly's 117K-DL-job trace (`user_id → vc` is 85% deterministic). Two unrelated published datasets, same finding. The project argues that prior published work in cloud-resource attribution has likely been measuring leakage rather than learning, and proposes a two-line `pandas` audit as a minimum methodology standard before reporting accuracy.
 >
-> Stack: Python 3.11, PyTorch + PyTorch Geometric (GraphSAGE), sentence-transformers (semantic features), OpenAI SDK (agent loop), boto3 (hardened collectors), Next.js + Tailwind (web demo), Vercel (hosting), Terraform (4-team labeled test environment), Docker + GitHub Actions (release pipeline). 14-command Python CLI.
+> Includes proper baselines (LogReg, k-NN, LabelProp, node2vec+LR, GraphSAGE), an explicit limitations document, the Azure post-audit results table, a calibration analysis (ECE = 0.001), and an optional natural-language interface layer (10-tool function-calling agent on GPT-4o). The agent is interface convenience; the audit is the contribution.
 >
-> Looking for cloud-cost / FinOps / ML-infra roles. If this is the kind of work your team does, I'd love to chat.
+> Stack: Python 3.11, PyTorch + PyTorch Geometric (GraphSAGE), gensim (node2vec biased random walks), sentence-transformers (MiniLM semantic features), scikit-learn (baselines), statsmodels (Granger causality), boto3 (hardened collectors), Next.js + Vercel (landing page + optional serverless agent endpoint), Terraform (4-team labeled test environment), Docker + GitHub Actions (release pipeline). 14-command Python CLI.
+>
+> Looking for cloud-cost / FinOps / ML-infra roles. If this kind of work is the kind of work your team does, I'd love to chat.
 
 **Skills (LinkedIn auto-suggests; pick all that apply):**
 - Graph Neural Networks
-- Machine Learning
-- AWS
-- Python
 - PyTorch
+- PyTorch Geometric
+- Machine Learning
+- ML Methodology
+- AWS
+- Azure
+- Python
 - Cloud Computing
 - DevOps
 - Cost Optimization
 - Cloud FinOps
 - Data Engineering
-- OpenAI API
+- node2vec
 - Next.js / React
 - Terraform
 
 ---
 
-## LinkedIn featured post (optional, but high-leverage)
+## LinkedIn featured post (high-leverage — pin to profile)
 
-Pin this to your profile via the Featured section. Treat it like a 1-paragraph elevator pitch with one strong image.
+Pin this to your profile via the Featured section. Treat it like a one-paragraph elevator pitch with one strong image.
 
-**Image:** the [docs/images/live-demo.gif](../images/live-demo.gif) — recruiters scrolling stop on motion.
+**Image:** Carbon.now.sh export of the pandas one-liner. The pandas one-liner is the most-shareable image — a screenshot of the README's audit section also works.
 
-**Caption (~100 words):**
+**Caption (~120 words):**
 
-> Spent the last few months building CostDNA — an open-source natural-language agent for AWS cost attribution backed by a GraphSAGE GNN.
+> I trained a GraphSAGE GNN for cloud-resource attribution on Microsoft's published 2.6M-VM Azure trace and got 97% accuracy on a 100-class problem.
 >
-> The interesting part isn't the model. While testing on Microsoft's published 2.6M-VM Azure dataset, my GNN hit 97% accuracy. I audited my own result and discovered it was a label-leakage tautology — every deployment in the dataset mapped 1:1 to its subscription. With the leak removed, honest behavioral accuracy was 6.9%. Documented the audit alongside the original number; the negative result became the project's most-defensible finding.
+> The number was too good. I ran a two-line pandas check:
 >
-> Live demo (you can chat with it): https://cost-dna.vercel.app
+>   `(df.groupby("deployment_id")["subscription_id"].nunique() == 1).mean()`
+>
+> → 1.0. Across all 33,205 deployments, my graph edge was a perfect lookup of the prediction target. The 97% was a database join, not learning. Honest behavioral accuracy with the leak removed: 6.9% — still 12× random but a long way from the headline.
+>
+> Same audit on a second Microsoft dataset (Philly 117K jobs) — same pattern. I argue prior published cloud-attribution work has likely been measuring leakage.
+>
+> Open-source: https://github.com/pauti04/CostDNA
 >
 > Looking for cloud-cost / FinOps / ML-infra roles — DMs open.
 
@@ -89,4 +100,20 @@ Priority order:
 4. **Experience section** — if you have a "Personal projects / portfolio" entry, add CostDNA there too
 5. **Skills section** — add the skill list above; ask 2-3 friends to endorse
 
-The Featured section + a strong About summary is most of the value. Recruiters scan in this order: photo → headline → About first paragraph → Featured. If they see CostDNA in Featured, half the work is done.
+The Featured section + a strong About summary is most of the value. Recruiters scan in this order: photo → headline → About first paragraph → Featured. If they see the pandas one-liner in Featured, half the work is done.
+
+## Headline tweak (LinkedIn) — optional but high-leverage
+
+**Current default:** "Software Engineer at X" or "Recent CS Grad" or similar.
+
+**Audit-first variant:** "Open-source ML methodology · GNNs for cloud-cost attribution · catching label leakage in published cloud datasets"
+
+The headline shows up in recruiter search results and on every comment you make. Specific > generic.
+
+---
+
+## About-section paragraph (LinkedIn)
+
+Add this to the LinkedIn "About" section, near the top. ~60 words:
+
+> I work on graph neural networks and cloud-cost attribution. Most recently I caught label leakage in two published Microsoft cloud datasets (2.6M-VM Azure trace; 117K-job Philly trace) and published the honest post-audit baselines — including a two-line pandas check to catch the same pattern elsewhere. Open-source: github.com/pauti04/CostDNA. Currently looking for cloud-cost / FinOps / ML-infra roles.

@@ -16,9 +16,10 @@ export default function Home() {
           </a>
           <div className="flex gap-6 text-sm text-text-soft">
             <a href="#audit" className="hover:text-text transition">Audit</a>
-            <a href="#how" className="hover:text-text transition">How it works</a>
-            <a href="#tools" className="hover:text-text transition">Tools</a>
-            <a href="#try" className="hover:text-text transition">Try it</a>
+            <a href="#results" className="hover:text-text transition">Results</a>
+            <a href="#how" className="hover:text-text transition">Method</a>
+            <a href="#limitations" className="hover:text-text transition">Limitations</a>
+            <a href="#try" className="hover:text-text transition">Demo</a>
             <a href={GH_URL} className="text-text hover:underline" target="_blank">
               GitHub ↗
             </a>
@@ -33,43 +34,45 @@ export default function Home() {
           <FadeIn>
             <div className="font-mono text-[11px] text-text-muted uppercase tracking-[0.25em] mb-6 flex items-center gap-3">
               <span className="inline-block w-8 h-px bg-border-strong" />
-              Open source · LLM agent over GraphSAGE
+              Open source · methodology audit · GraphSAGE
             </div>
           </FadeIn>
           <FadeIn delay={0.05}>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] text-balance text-text max-w-4xl">
-              Ask your AWS bill questions.{" "}
-              <span className="gradient-text">In English.</span>
+              A 97% accuracy result.{" "}
+              <span className="gradient-text">Audited.</span>{" "}
+              It was a tautology.
             </h1>
           </FadeIn>
           <FadeIn delay={0.12}>
             <p className="mt-6 text-lg md:text-xl text-text-soft max-w-2xl text-balance leading-relaxed">
-              A natural-language agent that infers resource ownership from CloudTrail,
-              IAM, and cost behaviour using a Graph Neural Network.
-              Answers questions like <em className="text-text">why did our bill spike Tuesday?</em>{" "}
-              with specific resources, teams, and dollar amounts.
+              CostDNA is a behavioral GNN for cloud-resource attribution.
+              While evaluating on Microsoft&apos;s published 2.6M-VM Azure trace
+              I caught label leakage that inflated my own first-cut accuracy
+              from <em className="text-text">6.9%</em> to <em className="text-text">97%</em>.
+              The honest negative result became the project&apos;s strongest finding.
             </p>
           </FadeIn>
           <FadeIn delay={0.18}>
             <div className="mt-10 flex flex-wrap gap-3">
               <a
-                href="#try"
+                href="#audit"
                 className="inline-flex items-center gap-2 bg-bg-deep text-text-on-deep font-medium px-6 py-3 rounded-md hover:bg-bg-deep-soft transition"
               >
-                Try the live demo →
-              </a>
-              <a
-                href="/your-account"
-                className="inline-flex items-center gap-2 bg-bg-section border border-border text-text font-medium px-6 py-3 rounded-md hover:border-border-strong transition"
-              >
-                Run on your AWS bill →
+                Read the audit →
               </a>
               <a
                 href={GH_URL}
                 target="_blank"
-                className="inline-flex items-center gap-2 text-text-soft font-medium px-6 py-3 rounded-md hover:text-text transition"
+                className="inline-flex items-center gap-2 bg-bg-section border border-border text-text font-medium px-6 py-3 rounded-md hover:border-border-strong transition"
               >
                 View on GitHub ↗
+              </a>
+              <a
+                href="#try"
+                className="inline-flex items-center gap-2 text-text-soft font-medium px-6 py-3 rounded-md hover:text-text transition"
+              >
+                Optional: chat with the agent →
               </a>
             </div>
           </FadeIn>
@@ -82,10 +85,10 @@ export default function Home() {
           <FadeIn>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-lg overflow-hidden">
               {[
-                ["2.6M", "Real Azure VMs in the audit set"],
-                ["13/15", "Real-AWS attribution accuracy (87%)"],
-                ["+53%", "Lift over best baseline (k-fold)"],
-                ["3", "Clouds: AWS · Azure · GCP"],
+                ["97% → 6.9%", "First-cut vs honest, post-audit"],
+                ["12×", "Lift over random on 100-class attribution"],
+                ["33,205", "Deployments mapped 1:1 to subscriptions"],
+                ["2", "Published datasets with the same pattern"],
               ].map(([v, l]) => (
                 <div key={l} className="bg-bg-section p-6">
                   <div className="text-4xl md:text-5xl font-bold tracking-tight text-text">
@@ -99,66 +102,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ────────── LIVE DEMO ────────── */}
-      <section id="try" className="bg-bg-section border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="01" title="Try it live" />
-          <FadeIn delay={0.05}>
-            <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
-              Chat with the agent over a synthetic 68-resource AWS account. The
-              agent has 10 tools — it picks which to chain based on your question,
-              hits the GraphSAGE-attributed scan, and answers in plain English.
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.10}>
-            <div className="rounded-xl shadow-soft-lg">
-              <AskLive />
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.15}>
-            <p className="mt-6 text-sm text-text-muted">
-              Live demo runs on GPT-4o · ~$0.01 per question · rate-limited to 5/IP/hour
-            </p>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ────────── PROBLEM ────────── */}
-      <section className="bg-bg border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="02" title="The problem" />
-          <div className="grid md:grid-cols-2 gap-12 max-w-5xl">
-            <FadeIn>
-              <p className="text-lg text-text-soft leading-relaxed">
-                Every FinOps team's most painful metric: the percentage of AWS spend
-                that can't be attributed to any team. Industry estimates put it at{" "}
-                <b className="text-text">40–60%</b>. Tagging is the standard answer,
-                but tags drift. Resources are created in a hurry. Engineers leave.
-              </p>
-            </FadeIn>
-            <FadeIn delay={0.05}>
-              <p className="text-lg text-text-soft leading-relaxed">
-                Existing FinOps dashboards (CloudHealth, Vantage, Apptio) are only
-                as good as the tags you have — and on most accounts, the tags you
-                have aren't enough. CostDNA is the input layer: a tool that{" "}
-                <em className="text-text">infers</em> the missing tags from
-                behaviour, then lets you ask English questions about the result.
-              </p>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
-      {/* ────────── AUDIT STORY ────────── */}
+      {/* ────────── AUDIT STORY (PROMOTED TO SECTION 01) ────────── */}
       <section id="audit" className="bg-bg-section border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="03" title="The audit story" />
+          <SectionHeader number="01" title="The audit" />
           <div className="max-w-4xl">
             <FadeIn>
               <p className="text-lg text-text-soft leading-relaxed mb-8">
-                I had a 97% accuracy result on Microsoft's published 2.6M-VM
-                Azure dataset. I audited it.{" "}
-                <b className="text-text">It was a tautology.</b>
+                I trained CostDNA on a controlled synthetic env and hit 90%+ accuracy.
+                To validate methodology on real data I picked Microsoft&apos;s published
+                Azure Public Dataset — 2.6 million VMs across 100 subscriptions, the
+                largest publicly available cloud trace.
+              </p>
+              <p className="text-lg text-text-soft leading-relaxed mb-8">
+                <b className="text-text">First-cut result:</b> LabelProp scored 97% across
+                5–100 teams. A 97% number on a 100-class problem (random = 1%) is
+                suspicious. State-of-the-art results on much easier problems rarely
+                beat 95%. So I audited.
               </p>
             </FadeIn>
 
@@ -183,34 +143,52 @@ export default function Home() {
               </div>
             </FadeIn>
 
+            <FadeIn delay={0.08}>
+              <div className="my-8">
+                <div className="font-mono text-xs text-text-muted uppercase tracking-wider mb-3">
+                  The pandas one-liner
+                </div>
+                <CodeBlock
+                  filename="audit.py"
+                  code={`# Is the deployment_id graph edge deterministic of the prediction target?
+(df.groupby("deployment_id")["subscription_id"].nunique() == 1).mean()
+# → 1.0`}
+                />
+              </div>
+            </FadeIn>
+
             <FadeIn delay={0.10}>
               <div className="my-8 p-6 rounded-lg bg-bg border-l-4 border-text">
                 <div className="font-mono text-xs text-text-muted uppercase tracking-wider mb-3">
-                  The catch
+                  What it means
                 </div>
                 <p className="text-text leading-relaxed">
                   Across all <b>33,205 deployments</b> in the Azure trace,{" "}
-                  <b>100%</b> mapped 1:1 to a single subscription. So{" "}
+                  <b>every single deployment</b> belonged to exactly one subscription.
+                  The{" "}
                   <code className="text-text bg-bg-soft px-1.5 py-0.5 rounded text-sm">
                     deployment_id
-                  </code>
-                  , used as a graph edge, was a perfect lookup of{" "}
+                  </code>{" "}
+                  graph edge was a perfect lookup of{" "}
                   <code className="text-text bg-bg-soft px-1.5 py-0.5 rounded text-sm">
                     subscription_id
                   </code>
-                  . LabelProp's "97%" was a graph database join, not learning.
+                  . LabelProp&apos;s &quot;97%&quot; was a graph-database join, not learning.
                 </p>
               </div>
             </FadeIn>
 
             <FadeIn delay={0.15}>
               <p className="text-text-soft leading-relaxed mb-8">
-                Most engineers stop when they see a high accuracy number and ship
-                it. I caught the leak by asking{" "}
-                <em className="text-text">"are you sure data is accurate?"</em>{" "}
-                The same audit on Microsoft's Philly DL trace surfaced another
-                partial leak: 85% of users belong to one virtual cluster. Three
-                datasets, three different shortcuts, one consistent finding.
+                Remove the leaking edges. Re-run. GraphSAGE on 100 classes:{" "}
+                <b className="text-text">6.9%</b> — still 12× random, still beats every
+                feature-only baseline including node2vec, but a long way from 97%.
+                Same audit on Microsoft&apos;s Philly DL trace surfaced another partial
+                leak: 85% of users belong to one virtual cluster.{" "}
+                <code className="text-text bg-bg-soft px-1.5 py-0.5 rounded text-sm">
+                  user_id → vc
+                </code>{" "}
+                was near-deterministic.
               </p>
             </FadeIn>
 
@@ -252,19 +230,13 @@ export default function Home() {
                         shortcut: "user_id → vc (85% deterministic)",
                         honest: "14% (2× rand)",
                       },
-                    ].map((row) => (
-                      <tr key={row.ds}>
-                        <td className="px-4 py-3 font-semibold text-text">{row.ds}</td>
-                        <td className="px-4 py-3 text-right font-mono text-text-soft">
-                          {row.n}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-text-muted line-through">
-                          {row.first}
-                        </td>
-                        <td className="px-4 py-3 text-text-soft text-xs">
-                          {row.shortcut}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-text font-semibold">{row.honest}</td>
+                    ].map((r) => (
+                      <tr key={r.ds}>
+                        <td className="px-4 py-3 font-medium text-text">{r.ds}</td>
+                        <td className="px-4 py-3 text-right text-text-soft">{r.n}</td>
+                        <td className="px-4 py-3 text-right text-text-soft line-through">{r.first}</td>
+                        <td className="px-4 py-3 text-text-soft font-mono text-xs">{r.shortcut}</td>
+                        <td className="px-4 py-3 text-right text-text font-semibold">{r.honest}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -273,26 +245,89 @@ export default function Home() {
             </FadeIn>
 
             <FadeIn delay={0.25}>
-              <p className="mt-10 text-text-soft leading-relaxed">
-                <b className="text-text">The methodological finding:</b> production
-                cloud attribution is mostly a metadata-lookup problem. Behavioural
-                fingerprinting matters specifically when metadata is missing or
-                unreliable — exactly the gap CostDNA's synthetic env reproduces.
+              <p className="mt-10 text-lg text-text-soft leading-relaxed">
+                <b className="text-text">The methodological claim:</b> across at least two
+                published cloud datasets, the dominant signal is structural metadata
+                (deployment IDs, user IDs, IAM principals) that is either directly the
+                prediction target or deterministically maps to it. The field has been
+                measuring leakage rather than learning. A two-line{" "}
+                <code className="text-text bg-bg-soft px-1.5 py-0.5 rounded text-sm">pandas</code>{" "}
+                audit should be a minimum standard before reporting cloud-attribution
+                accuracy.
               </p>
             </FadeIn>
           </div>
         </div>
       </section>
 
-      {/* ────────── HOW IT WORKS ────────── */}
-      <section id="how" className="bg-bg border-b border-border">
+      {/* ────────── PRIMARY RESULTS — AZURE POST-AUDIT ────────── */}
+      <section id="results" className="bg-bg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="04" title="How it works" />
+          <SectionHeader number="02" title="Primary results — Azure, post-audit" />
+          <FadeIn>
+            <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
+              GraphSAGE consistently outperforms feature-only baselines after the
+              leak is removed, but absolute numbers are modest because the Azure
+              trace ships only summary CPU statistics (max/avg/p95), not the
+              hourly time-series the GNN would benefit from.
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.05}>
+            <div className="overflow-x-auto rounded-xl border border-border shadow-soft">
+              <table className="w-full text-sm">
+                <thead className="bg-bg-soft">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-text-soft font-semibold">N teams</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">Random</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">LogReg</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">k-NN</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">LabelProp</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">node2vec+LR</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-text font-semibold">GraphSAGE</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-bg-section">
+                  {[
+                    ["5",   "20%",   "31.3% ± 0.8%", "28.6% ± 3.2%", "20.0% ± 2.0%", "pending", "34.6% ± 1.6%"],
+                    ["10",  "10%",   "18.3% ± 0.3%", "17.3% ± 0.1%", "10.0% ± 1.9%", "pending", "22.4% ± 1.6%"],
+                    ["25",  "4%",    "9.2% ± 0.8%",  "10.0% ± 0.3%", "4.0% ± 0.2%",  "pending", "10.6% ± 0.0%"],
+                    ["100", "1%",    "3.4% ± 0.1%",  "3.8% ± 0.2%",  "1.0% ± 0.0%",  "pending", "6.9% ± 0.5%"],
+                  ].map((row) => (
+                    <tr key={row[0]}>
+                      <td className="px-4 py-3 font-medium text-text">{row[0]}</td>
+                      <td className="px-4 py-3 text-right text-text-muted">{row[1]}</td>
+                      <td className="px-4 py-3 text-right text-text-soft">{row[2]}</td>
+                      <td className="px-4 py-3 text-right text-text-soft">{row[3]}</td>
+                      <td className="px-4 py-3 text-right text-text-soft">{row[4]}</td>
+                      <td className="px-4 py-3 text-right text-text-muted italic">{row[5]}</td>
+                      <td className="px-4 py-3 text-right text-text font-semibold">{row[6]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.10}>
+            <p className="mt-6 text-sm text-text-muted max-w-3xl leading-relaxed">
+              The node2vec column on Azure is pending re-run with the new baseline
+              harness — see <a href={`${GH_URL}/blob/main/docs/v2/results-phase2.md`} className="underline" target="_blank">docs/v2/results-phase2.md</a> for the synthetic-env
+              node2vec results (92.6% ± 4.2%, ties LogReg). The synthetic results
+              show GraphSAGE earns its complexity specifically on the hardest
+              kinds (cross_team, reassigned) rather than dominating overall.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ────────── HOW IT WORKS ────────── */}
+      <section id="how" className="bg-bg-section border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <SectionHeader number="03" title="Method" />
           <FadeIn>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-12">
               Three layers, all cloud-agnostic. Only the collector layer (left)
-              changes per cloud — the GNN and agent (right) are identical for
-              AWS, Azure, and GCP.
+              changes per cloud — the GNN architecture is identical for AWS,
+              Azure, and GCP.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-6">
@@ -300,21 +335,21 @@ export default function Home() {
               {
                 num: "1",
                 title: "Collect",
-                body: "Hardened boto3 / azure-mgmt / google-cloud collectors pull CloudTrail (or equivalent), Cost Explorer, IAM roles, VPC flow logs. Throttle-aware retry. AWS production-tested.",
+                body: "Hardened boto3 / azure-mgmt / google-cloud collectors pull CloudTrail (or equivalent), Cost Explorer, IAM roles, VPC flow logs. Throttle-aware retry. AWS production-tested; Azure evaluated on the published trace.",
               },
               {
                 num: "2",
-                title: "Train",
-                body: "Behavioural features (peak_hour, write_ratio, event_diversity, …) + LLM-derived semantic features (sentence-transformer over IAM names) → 2/4-layer GraphSAGE GNN. Auto-shrinks for small label sets.",
+                title: "Features + graph",
+                body: "17 behavioural features (peak_hour, write_ratio, event_diversity, per-verb shares, …) + sentence-transformer embeddings of IAM names. Edges from VPC + IAM-role + flow co-occurrence. Audit step: groupby(edge)[target].nunique() == 1 — kills leaky edges before training.",
               },
               {
                 num: "3",
-                title: "Ask",
-                body: "10-tool LLM agent (GPT-4o, function-calling) answers natural-language questions. Tools are pure data lookups against the trained scan output — fast, deterministic, auditable.",
+                title: "Train",
+                body: "2-or-4-layer GraphSAGE classifier with supervised contrastive head. Auto-shrinks (2-layer / hidden=8 / dropout=0.4) when n_labels < 30. Class-weighted loss + stratified split. Calibrated post-hoc (ECE=0.001).",
               },
             ].map((step, i) => (
               <FadeIn key={step.num} delay={i * 0.05}>
-                <div className="bg-bg-section border border-border rounded-xl p-6 h-full shadow-soft hover:shadow-soft-lg transition">
+                <div className="bg-bg border border-border rounded-xl p-6 h-full shadow-soft hover:shadow-soft-lg transition">
                   <div className="font-mono text-xs text-text-muted mb-3">
                     STEP {step.num}
                   </div>
@@ -331,51 +366,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ────────── 9 TOOLS ────────── */}
-      <section id="tools" className="bg-bg-section border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="05" title="10 tools the agent chains" />
-          <FadeIn>
-            <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
-              Each tool wraps a piece of the underlying CostDNA pipeline. The LLM
-              decides which to call (or chain) based on the visitor's question.
-            </p>
-          </FadeIn>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              ["summarize_account", "High-level rollup: total resources, by-team spend and confidence."],
-              ["attribute_resource", "Look up which team owns a specific resource and the why-explanation."],
-              ["top_spenders", "Top resources by total cost, optionally filtered by team."],
-              ["find_cost_spikes", "Largest spikes + Granger-causality attribution to deploys."],
-              ["find_anomalies", "Resources that don't fit any team — investigate manually."],
-              ["search_resources", "Substring match across resource IDs."],
-              ["signal_history", "Recent CloudTrail events + cost samples for one resource."],
-              ["find_idle", "Low-activity resources to consider for cleanup."],
-              ["compare_teams", "Side-by-side comparison: counts, spend, top resources, by type."],
-              ["find_abandoned", "Resources whose activity has collapsed in the recent half of the window — likely abandoned. Sorted by spend."],
-            ].map(([name, desc]) => (
-              <div
-                key={name}
-                className="rounded-lg border border-border bg-bg p-4 hover:border-border-strong transition"
-              >
-                <code className="font-mono text-sm font-semibold text-text">{name}</code>
-                <p className="mt-2 text-sm text-text-soft leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ────────── REAL-AWS RESULT ────────── */}
+      {/* ────────── REAL-AWS ENGINEERING VALIDATION ────────── */}
       <section className="bg-bg-deep text-text-on-deep border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="06" title="Real-AWS deployment" dark />
+          <SectionHeader number="04" title="Engineering pipeline validation — real AWS" dark />
           <FadeIn>
             <p className="text-lg text-zinc-300 leading-relaxed max-w-3xl mb-10">
-              Provisioned a labeled AWS environment, ran per-team workload
-              simulators on a 24/7 EC2 to generate authentic CloudTrail signal,
-              scanned the live account. Same code that powers the live demo.
+              Provisioned a labeled AWS environment via Terraform, ran per-team
+              workload simulators on a 24/7 t3.micro for 3 days to generate
+              authentic CloudTrail signal, scanned the live account.
+              This validates that the collectors, graph construction, and
+              training loop run end-to-end on real CloudTrail — not a primary
+              methodological result (15 labels is too few for tight error bars).
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl">
@@ -393,9 +395,15 @@ export default function Home() {
           <FadeIn delay={0.10}>
             <p className="mt-10 text-sm text-zinc-400 max-w-3xl leading-relaxed">
               Both wrong predictions came back with confidence below 0.7 and were
-              correctly surfaced by <code className="bg-bg-deep-soft px-1.5 py-0.5 rounded text-zinc-300">find_anomalies</code> for human review —
-              exactly the active-learning workflow the system is designed for.
-              Verification artifacts in <a href="https://github.com/pauti04/CostDNA/tree/main/docs/real-aws-evidence" className="underline" target="_blank">docs/real-aws-evidence/</a>.
+              correctly surfaced by{" "}
+              <code className="bg-bg-deep-soft px-1.5 py-0.5 rounded text-zinc-300">find_anomalies</code>{" "}
+              for human review — exactly the active-learning workflow the system
+              is designed for. The wide ±27% 5-fold CV variance reflects only 15
+              labels; methodology validates with tighter error bars on synthetic
+              where label count is controllable. Verification artifacts in{" "}
+              <a href={`${GH_URL}/tree/main/docs/real-aws-evidence`} className="underline" target="_blank">
+                docs/real-aws-evidence/
+              </a>.
             </p>
           </FadeIn>
         </div>
@@ -404,7 +412,7 @@ export default function Home() {
       {/* ────────── VISUAL PROOF ────────── */}
       <section className="bg-bg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="07" title="Visual proof — embedding space" />
+          <SectionHeader number="05" title="Visual proof — embedding space" />
           <FadeIn>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
               GraphSAGE learns a 2D-projected representation where same-team
@@ -433,32 +441,92 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ────────── MULTI-CLOUD ────────── */}
-      <section className="bg-bg-section border-b border-border">
+      {/* ────────── LIMITATIONS ────────── */}
+      <section id="limitations" className="bg-bg-section border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <SectionHeader number="08" title="Multi-cloud architecture" />
+          <SectionHeader number="06" title="Limitations and what doesn't work" />
           <FadeIn>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
-              The model + features + agent are cloud-agnostic — only the
-              collector layer is provider-specific. AWS calls{" "}
+              The full breakdown is in{" "}
+              <a href={`${GH_URL}/blob/main/docs/limitations.md`} className="underline text-text" target="_blank">
+                docs/limitations.md
+              </a>. The honest highlights are below — research maturity over polish.
+            </p>
+          </FadeIn>
+          <div className="grid md:grid-cols-2 gap-6 max-w-5xl">
+            {[
+              {
+                title: "Behavioral attribution has a natural ceiling on thin features",
+                body: "On Azure's summary-CPU-only feature set, GraphSAGE's lift over feature-only baselines is small. The GNN needs richer per-resource signal (hourly time-series, full CloudTrail) to earn its complexity.",
+              },
+              {
+                title: "Small label sets give wide error bars",
+                body: "The real-AWS 87% has ±27% k-fold variance because 15 labels split 5-fold leaves 3 samples per fold. Use bigger labeled sets for production deployment decisions.",
+              },
+              {
+                title: "Homogeneous accounts have no behavioral signal",
+                body: "If every team uses one IAM role, one VPC, one calling pattern, CostDNA has nothing to fingerprint. The model only earns its keep when behavior actually differs across teams.",
+              },
+              {
+                title: "CostDNA is not a production-deployed tool",
+                body: "\"I ran it on a real AWS account I owned\" is different from \"a user ran this on their account.\" The pilot validates engineering; production trust would require signed binaries, audited IAM, privacy review.",
+              },
+              {
+                title: "Accounts under ~100 resources are too sparse",
+                body: "The graph needs enough density for neighborhood aggregation to converge. Very small accounts get random-ish results regardless of how good the model is.",
+              },
+              {
+                title: "The synthetic env is hand-constructed",
+                body: "Difficulty kinds (cross_team, reassigned, shared_service, sparse) reproduce failure modes seen on real accounts, but the env is by construction the regime CostDNA was designed for. Treat synthetic numbers as ablation, not headline.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-border bg-bg p-6">
+                <h3 className="font-semibold text-text mb-3 leading-snug">{item.title}</h3>
+                <p className="text-sm text-text-soft leading-relaxed">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ────────── MULTI-CLOUD ────────── */}
+      <section className="bg-bg border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <SectionHeader number="07" title="Multi-cloud architecture" />
+          <FadeIn>
+            <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
+              The model + features are cloud-agnostic — only the collector layer
+              is provider-specific. AWS calls{" "}
               <code className="bg-bg-soft px-1.5 py-0.5 rounded text-sm">cloudtrail:LookupEvents</code>;
               Azure calls{" "}
               <code className="bg-bg-soft px-1.5 py-0.5 rounded text-sm">monitor.activity_logs.list</code>;
               GCP calls{" "}
               <code className="bg-bg-soft px-1.5 py-0.5 rounded text-sm">cloud_logging.list_entries</code>.
-              Same downstream pipeline.
+              All three return identical-shape DataFrames downstream.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { name: "AWS", status: "Production-tested", note: "13/15 = 87% on real AWS · live demo runs against this stack",
-                stat: "✓" },
-              { name: "Azure", status: "Implemented · awaiting validation", note: "Code follows azure-mgmt-resource v25 + activity-logs + cost-management v4 patterns; mocked-shape tests pass",
-                stat: "—" },
-              { name: "GCP", status: "Implemented · awaiting validation", note: "Code follows google-cloud-asset v4 + cloud-logging protobuf payloads; mocked-shape tests pass",
-                stat: "—" },
+              {
+                name: "AWS",
+                status: "Engineering-validated",
+                note: "13/15 = 87% on a Terraform-provisioned account · production-tested collectors",
+                stat: "✓",
+              },
+              {
+                name: "Azure",
+                status: "Methodology-evaluated",
+                note: "Audit on Microsoft's 2.6M-VM Public Dataset; live-subscription collector implemented per SDK v4 patterns but not yet run against a live account",
+                stat: "△",
+              },
+              {
+                name: "GCP",
+                status: "Implemented · awaiting live run",
+                note: "Code follows google-cloud-asset v4 + cloud-logging protobuf payloads; mocked-shape tests pass",
+                stat: "—",
+              },
             ].map((c) => (
-              <div key={c.name} className="rounded-xl border border-border bg-bg p-6">
+              <div key={c.name} className="rounded-xl border border-border bg-bg-section p-6">
                 <div className="flex items-baseline justify-between mb-3">
                   <div className="text-2xl font-semibold text-text">{c.name}</div>
                   <div className="text-3xl font-bold text-text-muted">{c.stat}</div>
@@ -473,6 +541,60 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ────────── OPTIONAL NATURAL-LANGUAGE INTERFACE (DEMOTED) ────────── */}
+      <section id="try" className="bg-bg-section border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <SectionHeader number="08" title="Optional natural-language interface" />
+          <FadeIn>
+            <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
+              CostDNA ships with an optional natural-language interface — a 10-tool
+              agent on top of the trained scan output. The agent uses OpenAI&apos;s
+              function-calling API; tools are pure data lookups against the scan,
+              so responses are fast, deterministic, and auditable.{" "}
+              <b className="text-text">This is interface convenience, not the core
+              contribution.</b>
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.05}>
+            <div className="rounded-xl shadow-soft-lg mb-8">
+              <AskLive />
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.10}>
+            <p className="text-sm text-text-muted mb-8">
+              Live demo runs on GPT-4o · ~$0.01 per question · rate-limited to 5/IP/hour
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={0.15}>
+            <details className="bg-bg rounded-lg border border-border p-6 max-w-4xl">
+              <summary className="cursor-pointer font-semibold text-text">
+                The 10 tools (click to expand)
+              </summary>
+              <div className="mt-6 grid md:grid-cols-2 gap-3">
+                {[
+                  ["summarize_account", "High-level rollup: resources, spend, confidence per team."],
+                  ["attribute_resource", "Who owns this resource? + why-explanation."],
+                  ["top_spenders", "Top resources by cost, optionally filtered by team."],
+                  ["find_cost_spikes", "Largest spikes + Granger-causality attribution to deploys."],
+                  ["find_anomalies", "Resources that don't fit any team."],
+                  ["search_resources", "Substring match across resource IDs."],
+                  ["signal_history", "Recent CloudTrail + cost samples for one resource."],
+                  ["find_idle", "Low-activity resources."],
+                  ["compare_teams", "Side-by-side team comparison."],
+                  ["find_abandoned", "Resources whose activity collapsed in recent half."],
+                ].map(([name, desc]) => (
+                  <div key={name} className="rounded-lg border border-border bg-bg-section p-4">
+                    <code className="font-mono text-sm font-semibold text-text">{name}</code>
+                    <p className="mt-1 text-sm text-text-soft leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* ────────── INSTALL ────────── */}
       <section className="bg-bg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
@@ -480,7 +602,7 @@ export default function Home() {
           <FadeIn>
             <p className="text-lg text-text-soft leading-relaxed max-w-3xl mb-10">
               Three usage patterns — CLI, REPL, web UI. All run against the same
-              agent code that powers the live demo above.
+              code that produced the results above.
             </p>
           </FadeIn>
 
@@ -488,37 +610,35 @@ export default function Home() {
             <div>
               <h3 className="font-semibold text-text mb-3 flex items-center gap-2">
                 <span className="font-mono text-xs text-text-muted">A.</span>
-                One-shot CLI
+                Reproduce the synthetic benchmark
               </h3>
               <CodeBlock
                 filename="bash"
-                code={`$ costdna ask "why did our bill spike Tuesday?" \\
-    --from-dir runs/today`}
+                code={`$ costdna benchmark --synthetic --seeds 5
+# prints the node2vec / GraphSAGE / LogReg / LabelProp table`}
               />
             </div>
             <div>
               <h3 className="font-semibold text-text mb-3 flex items-center gap-2">
                 <span className="font-mono text-xs text-text-muted">B.</span>
-                Multi-turn REPL
+                Live AWS scan
               </h3>
               <CodeBlock
                 filename="bash"
-                code={`$ costdna chat --from-dir runs/today
-[0] ❯ summarize this account
-[1] ❯ which 5 resources are spending the most?
-[2] ❯ tell me about i-0c4f3230 specifically`}
+                code={`$ costdna doctor --aws-profile prod
+$ costdna scan --aws-profile prod --save-dir runs/today`}
               />
             </div>
             <div>
               <h3 className="font-semibold text-text mb-3 flex items-center gap-2">
                 <span className="font-mono text-xs text-text-muted">C.</span>
-                Web chat UI (Streamlit)
+                Natural-language interface (optional)
               </h3>
               <CodeBlock
                 filename="bash"
                 code={`$ pip install 'costdna[ui,agent]'
 $ costdna serve
-# open http://localhost:8501 → "Chat with the agent" tab`}
+# open http://localhost:8501`}
               />
             </div>
             <div>
@@ -534,8 +654,8 @@ $ costdna serve
           </div>
 
           <p className="mt-8 text-sm text-text-muted max-w-3xl">
-            Setup for the agent commands:{" "}
-            <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">pip install 'costdna[agent]'</code> +{" "}
+            Optional agent setup:{" "}
+            <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">pip install &apos;costdna[agent]&apos;</code> +{" "}
             <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">export OPENAI_API_KEY=...</code>
           </p>
         </div>
@@ -548,15 +668,15 @@ $ costdna serve
           <ul className="grid md:grid-cols-2 gap-x-12 gap-y-4 text-text-soft max-w-5xl">
             {[
               ["Python 3.11", "pandas, numpy, scikit-learn, statsmodels, networkx"],
-              ["PyTorch 2.x + PyTorch Geometric", "GraphSAGE classifier — 2 to 4 layers, residual"],
+              ["PyTorch 2.x + PyTorch Geometric", "GraphSAGE classifier — 2 to 4 layers, residual, supervised contrastive head"],
+              ["gensim Word2Vec", "node2vec baseline (skip-gram on biased random walks)"],
               ["sentence-transformers", "MiniLM embeddings of IAM role names + resource IDs + tags"],
-              ["OpenAI SDK", "function-calling agent loop — pluggable LLM backend"],
               ["boto3 (hardened)", "adaptive retry, throttle-aware CloudTrail lookup_events"],
               ["azure-mgmt-* + google-cloud-*", "multi-cloud collectors (lazy-loaded extras)"],
-              ["Streamlit + Click + Rich", "CLI commands + interactive chat UI"],
+              ["statsmodels", "Granger-causality spike attribution"],
               ["Terraform", "labelled AWS env with CloudTrail data events + VPC Flow Logs"],
               ["pytest + GitHub Actions", "CI on every commit; Docker auto-publish on tag"],
-              ["Next.js + Vercel", "this landing page + serverless agent endpoint"],
+              ["Next.js + Vercel", "this landing page + serverless agent endpoint (optional interface)"],
             ].map(([head, body]) => (
               <li key={head} className="flex gap-3 items-start">
                 <span className="text-text-muted mt-1.5 text-xs">▸</span>
@@ -575,14 +695,15 @@ $ costdna serve
         <div className="max-w-4xl mx-auto px-6 py-20 text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-text-on-deep mb-6">
-              Open source. Forkable. Ready.
+              The audit is the contribution.
             </h2>
           </FadeIn>
           <FadeIn delay={0.05}>
             <p className="text-lg text-zinc-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-              MIT licensed, hardened collectors, multi-cloud architecture, real-AWS
-              numbers in the README. If you're hiring for cloud-cost / FinOps /
-              ML-infra roles — I'd like to do this kind of work full-time.
+              MIT licensed. Methodology audit on two published cloud datasets,
+              honest baseline comparison including node2vec, explicit limitations.
+              If you&apos;re hiring for cloud-cost / FinOps / ML-infra roles —
+              I&apos;d like to do this kind of work full-time.
             </p>
           </FadeIn>
           <FadeIn delay={0.10}>
@@ -595,10 +716,10 @@ $ costdna serve
                 ↗ View on GitHub
               </a>
               <a
-                href="#try"
+                href="#audit"
                 className="inline-flex items-center gap-2 border border-zinc-600 text-text-on-deep font-medium px-6 py-3 rounded-md hover:bg-bg-deep-soft transition"
               >
-                Try the live demo
+                Re-read the audit
               </a>
             </div>
           </FadeIn>

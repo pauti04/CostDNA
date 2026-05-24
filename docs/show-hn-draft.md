@@ -1,125 +1,133 @@
-# Show HN draft
+# Show HN draft — audit-first version
 
 *Edit before submitting. The title is the most important thing — HN front-page makes or breaks on the title.*
 
 ---
 
-## Title (pick one — A is the strongest)
+## Title (pick one — A and C are strongest for the new framing)
 
-**A. Show HN: I built a 97% accurate cloud-cost ML model. Then I audited it. (the audit is the project)**
+**A. Show HN: I caught label leakage in Microsoft's 2.6M-VM Azure dataset. Here's the audit. (preferred)**
 
-**B. Show HN: CostDNA — natural-language agent for AWS cost attribution (live demo)**
+**B. Show HN: A two-line pandas check that turned my 97% accuracy into 6.9%**
 
-**C. Show HN: Catching label leakage in a 2.6M-VM cloud benchmark (and what that means for cost attribution)**
+**C. Show HN: CostDNA — methodology audit on two published cloud-attribution datasets**
 
-A leans into the audit story (which is the genuinely-novel contribution). B leans into the demo (more accessible to non-ML readers). C is the most academic.
+D. Show HN: Behavioral GNN for cloud-cost attribution (and the audit that made the negative result the contribution)
+
+A is the strongest because it leads with the specific finding (Microsoft Azure 2.6M VMs, a recognized dataset) and the active verb ("caught"). B leans into the pandas one-liner which is the most-screenshotable artifact. C is the most academic; use for lobste.rs / r/MachineLearning. D is the longest but most accurate.
 
 ## URL
 
 https://github.com/pauti04/CostDNA
 
-## Body
+## Body (audit-first)
 
-Hey HN — I built CostDNA, a natural-language agent for AWS cost attribution backed by a behavioral GraphSAGE model. Live demo: https://cost-dna.vercel.app — chat with the agent over a synthetic 68-resource account, no signup.
+I built [CostDNA](https://github.com/pauti04/CostDNA), an open-source graph neural network for cloud-resource attribution. While evaluating on Microsoft's published 2.6M-VM Azure trace I hit 97% accuracy on a 100-class problem. That number was too good. I ran a two-line audit:
 
-The interesting part isn't the agent. It's that I caught two label-leakage bugs in published cloud datasets while building this.
+```python
+(df.groupby("deployment_id")["subscription_id"].nunique() == 1).mean()
+# → 1.0
+```
 
-**The setup:** 40-60% of AWS spend is untagged. FinOps tools (CloudHealth, Vantage, Apptio) are tag-based, so they go blind on untagged resources. CostDNA's claim: infer ownership from behavioral fingerprints (CloudTrail / IAM / VPC flow logs / cost time-series shape) using a GNN, write tags back, your existing dashboard suddenly explains 90% instead of 50%.
+Across all 33,205 deployments in the dataset, every single one belonged to exactly one subscription. The graph edge I was using was a perfect lookup of the prediction target. With the leak removed, honest GraphSAGE accuracy on 100 classes was **6.9%** — still 12× random, still beats every non-graph baseline including node2vec, but a long way from 97%.
 
-**The audit:** I tested on Microsoft's published 2.6M-VM Azure trace and Microsoft Philly's 117K-job ML training trace. First-cut accuracy: 97% (Azure) and 89% (Philly). Both were tautologies:
+I ran the same audit on Microsoft Philly's 117K-DL-job trace. Found another partial leak: 85% of users belong to exactly one virtual cluster. With user edges removed: 15%.
 
-- **Azure:** every `deployment_id` (used as a graph edge) maps 1:1 to a single `subscription_id` across all 33,205 deployments. The "graph" was a perfect lookup of the answer.
-- **Philly:** 85% of users belong to exactly one virtual cluster. `user_id → vc` is near-deterministic.
+Two unrelated public datasets, same pattern. I argue prior published work in cloud-resource attribution has likely been measuring leakage rather than learning, and propose a two-line pandas check as a minimum standard before reporting cloud-attribution accuracy:
 
-Disable the leaking edges and honest GraphSAGE accuracy drops to 6.9% on Azure (still 12× random across 100 classes) and 14% on Philly. Documented both audits in the repo with the original numbers, the leak, and the honest result.
+```python
+def find_deterministic_edges(df, target_col, candidate_edge_cols, threshold=0.85):
+    out = {}
+    for col in candidate_edge_cols:
+        determinism = (df.groupby(col)[target_col].nunique() == 1).mean()
+        if determinism >= threshold:
+            out[col] = determinism
+    return out
+```
 
-**The methodological finding:** production cloud attribution is mostly a *metadata-lookup* problem. Deployment IDs, IAM principals, machine assignments — these encode ownership directly. Behavioral fingerprinting matters specifically when metadata is missing or unreliable, which is the gap CostDNA's synthetic environment is designed to reproduce (and where GraphSAGE hits 95%+ on hard cases that break feature-only baselines completely).
+**What this means in practice:** if your cloud-attribution paper uses `deployment_id` (or `request_id`, or `user_id`, or `cluster_id`) as a graph signal without running the audit, your reported accuracy is probably inflated. Behavioral attribution on its own — without the structural shortcuts — is much harder than the headlines suggest. The synthetic environment in the repo demonstrates the regime where behavioral GNNs actually earn their complexity (and where they don't).
 
-**The product layer:** the agent has 10 callable tools (summarize_account, attribute_resource, top_spenders, find_cost_spikes, find_anomalies, etc.). The LLM decides which to chain. GPT-4o (function-calling); backend is pluggable. Tools are pure data lookups against a pre-computed scan.
+**About the project itself:** CostDNA is a research-tone open-source project documenting the audit. It includes proper baselines (LogReg, k-NN, LabelProp, node2vec+LogReg, GraphSAGE), an explicit limitations doc, and the 2.6M-VM-trace post-audit results table. There's an optional natural-language interface (10-tool agent on GPT-4o function-calling) but that's not the contribution — the audit is.
 
-Stack: Python 3.11, PyTorch + PyG, sentence-transformers (MiniLM for semantic features), boto3 (hardened collectors), Click + Rich for CLI, Next.js 14 for the web demo, Vercel for hosting, Terraform for the labeled test environment.
+Stack: Python 3.11, PyTorch + PyG, gensim (node2vec), sentence-transformers (MiniLM), scikit-learn, statsmodels, boto3 (hardened), Next.js + Vercel (optional UI), Terraform (labeled test env).
 
-Looking for: feedback on the audit framing, suggestions for harder hard cases in the synthetic env, and the inevitable "why didn't you try X" replies that make it better.
+Live demo: https://cost-dna.vercel.app
+Audit writeup: https://github.com/pauti04/CostDNA#the-audit
+Limitations: https://github.com/pauti04/CostDNA/blob/main/docs/limitations.md
+Blog post: https://github.com/pauti04/CostDNA/blob/main/docs/blog-post-audit.md
 
-Self-disclosure: I'm currently looking for cloud-cost / FinOps / ML-infra roles. If this kind of work is interesting to your team, please reach out.
+Looking for: counterexamples (public cloud datasets that are rich in behavioral features AND don't have the structural-metadata leak — I'd love to test there), and feedback on the methodology thesis. Genuine counterexamples make the contribution sharper, not weaker.
+
+Self-disclosure: I'm currently job-hunting for cloud-cost / FinOps / ML-infra roles. If this kind of work is interesting to your team, please reach out.
 
 ---
 
-## Comment-prep
+## Reply-to-your-own-thread comment (post within 5 minutes)
 
-Anticipate these questions and have answers ready:
+The substantive first-reply that pushes the thread up:
+
+```
+For anyone wanting to run the audit on their own dataset, the entire check is:
+
+  (df.groupby("edge_column")["target_column"].nunique() == 1).mean()
+
+If that returns close to 1.0, your "edge" is a tautological lookup of the
+answer. I checked four edge candidates on the Azure trace — deployment_id was
+1.000, the others were under 0.20. One value above 0.85 is enough to invalidate
+a benchmark accuracy claim.
+
+The full check function with a threshold is in docs/limitations.md §6.
+```
+
+---
+
+## Comment-prep — anticipate these and have answers ready
+
+**"Isn't this just standard label leakage?"**
+Yes — label leakage is well-known. What's specific to cloud-attribution is the *form* of the leak: structural metadata (deployment IDs, IAM principals, user IDs) is so close to the prediction target in published cloud datasets that it's easy to accidentally include as a graph edge. The audit pattern is general; the application to cloud-data is the contribution.
+
+**"6.9% on 100 classes is bad. Why publish?"**
+6.9% is 12× random (random = 1%), and it beats every feature-only baseline including node2vec on the same regime. The point isn't that 6.9% is good — it's that 6.9% is honest. The 97% wasn't. Reporting the honest negative number, plus the audit methodology that caught the inflated one, is the contribution.
 
 **"Why GNN over a simpler model?"**
-LogReg gets 90% overall on synthetic — but 0% on cross-team across 5 seeds, and 60% ±49% on shared-services. The graph propagation handles cross-team / shared-service / reassigned cases that feature-only methods can't separate. See the ablation table in the README.
+On the synthetic env, GraphSAGE doesn't dominate node2vec+LR overall (both around 92%). It earns its complexity *specifically* on the two hardest kinds — cross_team and reassigned resources. Honest comparison table in docs/v2/results-phase2.md.
+
+**"How do you handle the 100% subscription leak in production?"**
+You don't — if the metadata is deterministic, just use it. CostDNA's value prop is the behavioral fallback for resources where metadata is missing or has drifted. The audit makes that scope explicit instead of papering over it with inflated numbers.
 
 **"What if I don't have CloudTrail data events?"**
 Management events are ~free (1.5% of API call volume) and they include the IAM role + source IP that drive most of the behavioral signal. Data events (S3 object-level, Lambda invoke) cost more — CostDNA falls back gracefully to management-only.
 
-**"How do you handle the 100% subscription label leak in production?"**
-You don't — if the metadata is deterministic, just use it. CostDNA's value prop is the behavioral fallback for resources where metadata is missing or has drifted. The audit makes that scope explicit instead of papering over it with inflated numbers.
+**"Is the synthetic env realistic?"**
+It's a Terraform-able 4-team AWS account with deliberate hard cases (shared services, cross-team resources, reassigned ownership). The feature density matches what real CloudTrail provides. It's not a substitute for production data, but it's where the methodology validates cleanly without the metadata-lookup tautologies that dominate real cloud datasets. Honest framing: treat synthetic numbers as ablation, not headline.
 
 **"Live demo costs?"**
 ~$0.01/question on OpenAI. Rate-limited to 5 questions/IP/hour. Cap at $5/day on the OpenAI key.
 
-**"Is the synthetic env realistic?"**
-It's a Terraform-able 4-team AWS account with deliberate hard cases (shared services, cross-team resources, reassigned ownership). The feature density matches what real CloudTrail provides. It's not a substitute for production data, but it's where the methodology validates cleanly without the metadata-lookup tautologies that dominate real cloud datasets.
+**"Why is multi-cloud only partially validated?"**
+AWS is engineering-validated (Terraform pilot, 13/15 = 87%). Azure is methodology-validated via the published trace. GCP collectors exist but await a live run. Honest scope statement in the README and docs/limitations.md §4.
 
 ---
 
 ## Submission timing
 
 - **Best windows for HN front page:** Tuesday-Thursday, 9-11am EST. Avoid weekends (lower traffic) and Mondays (post-weekend backlog).
-- **Frontload engagement:** comment on your own post within 5 minutes with one substantive reply (not "thanks for reading"). Replies push posts up the new page.
+- **Frontload engagement:** comment on your own post within 5 minutes with the substantive reply above (the pandas one-liner block). Replies push posts up the new page.
 - **Don't ask people to upvote.** HN auto-flags posts that get sudden traffic from off-site.
 - **Have a friend or two upvote in the first 30 minutes** — getting from 1 to 5 votes fast is the hardest part. After 5, momentum carries.
 
 ---
 
-## Other places to post
+## Other places to post (in priority order)
 
-| Channel | Link/path | Notes |
+| Channel | Best title variant | Notes |
 |---|---|---|
-| **r/MachineLearning** | self-post | Lead with the audit, not the demo |
-| **r/devops** | self-post | Lead with the demo, audit is secondary |
-| **r/aws** | self-post | Frame as "here's the thing your tagging strategy is missing" |
-| **lobste.rs** | submit | More technical audience than HN — audit story plays well |
-| **dev.to / Hashnode** | crosspost the blog | Good for SEO, slow burn |
-| **Twitter/X thread** | thread the audit | One image per tweet — the per-team spend table, the leak chart, the honest accuracy table |
-| **LinkedIn** | post the blog link | Mention you're job-hunting in the same post |
-
----
-
-## Cold-email template (for FinOps / cloud-cost companies)
-
-Subject: built an open-source cost-attribution agent — would it interest your team?
-
-Hi {name},
-
-I noticed {company} is hiring for {role}. I built CostDNA as a portfolio piece — it's a natural-language agent that infers AWS resource ownership from behavioral patterns (CloudTrail / IAM / cost time-series), backed by a GraphSAGE GNN. The novel contribution is a self-audit that caught label leakage in two published cloud datasets, including Microsoft's 2.6M-VM Azure trace.
-
-Live demo: https://cost-dna.vercel.app
-Repo: https://github.com/pauti04/CostDNA
-
-Would the work be relevant to {team}? Happy to walk through the methodology if useful.
-
-Thanks,
-Parth
-
----
-
-**Companies to target** (FinOps + cost attribution focus):
-
-- Vantage
-- Cloudability (Apptio)
-- CloudHealth (VMware)
-- Kubecost (now part of IBM)
-- Spot.io (NetApp)
-- Harness (FinOps module)
-- ProsperOps
-- nOps
-- Yotascale
-- Cast.ai
-- AWS itself (Cost Explorer / Compute Optimizer teams)
-- Datadog (Cloud Cost Management)
-- New Relic (similar)
-- Snowflake (cost intelligence)
+| **lobste.rs** | A or C | Most technical audience; audit story plays best here |
+| **r/MachineLearning** | B (the pandas one-liner) | Lead with the methodology, not the product |
+| **dev.to / Hashnode** | A (full blog post) | Crosspost the docs/blog-post-audit.md; permanent SEO |
+| **r/devops** | A | Cloud-attribution angle |
+| **r/aws** | "the thing your tagging strategy is missing" | Lead with the FinOps framing |
+| **Twitter/X thread** | A | Image-attached, see docs/outreach/twitter-thread/THREAD.md |
+| **LinkedIn** | A as a featured post | Mention you're job-hunting in the same post |
+| **Hacker Newsletter** | inbound after HN front page | If A makes the front page |
+| **TLDR Newsletter / Pointer** | inbound after HN front page | Same |
