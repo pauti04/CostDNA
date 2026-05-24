@@ -22,6 +22,7 @@ dependencies = [
     "torch-geometric>=2.5",
     "statsmodels>=0.14",
     "sentence-transformers>=2.5",   # semantic feature extraction
+    "gensim>=4.3",                  # node2vec baseline (skip-gram on random walks)
 ]
 
 [project.optional-dependencies]

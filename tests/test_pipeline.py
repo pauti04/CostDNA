@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from costdna import TEAMS
-from costdna.baselines import (run_logistic_regression)
+from costdna.baselines import (run_logistic_regression, run_node2vec)
 from costdna.collectors import generate_synthetic_signals
 from costdna.features import FEATURE_COLUMNS, extract_features, normalize_features
 from costdna.graph import build_graph, to_pyg
@@ -106,3 +106,61 @@ def test_baselines_fail_on_hard_cases_features_only():
                  if k in log_reg.per_kind]
     assert any(a <= 0.5 for a in hard_accs), \
         f"LogReg solved every hard case ({log_reg.per_kind}) — noise too gentle"
+
+
+def test_node2vec_baseline_runs():
+    """node2vec+LR runs end-to-end and beats Majority on synthetic data.
+
+    This is a smoke test, not an accuracy claim — the strong-baseline numbers
+    live in docs/v2/results-phase2.md. We assert two things:
+    1. The baseline doesn't crash on a realistic small graph
+    2. It beats random by some margin (sanity check on the wiring)
+    """
+    pytest.importorskip("torch_geometric")
+    from costdna.collectors import generate_synthetic_signals
+    from costdna.features import extract_features, normalize_features
+    from costdna.graph import build_graph
+
+    signals, metadata, flows, _ = generate_synthetic_signals(
+        n_per_type_per_team=3, days=7, seed=11,
+    )
+    metadata = metadata[metadata["team"].isin(TEAMS)].reset_index(drop=True)
+    signals = signals[signals["resource_id"].isin(metadata["resource_id"])]
+    feats_norm = normalize_features(extract_features(signals, metadata))
+    g = build_graph(feats_norm, metadata, flows, signals)
+    y = np.array([TEAMS.index(t) for t in metadata["team"]])
+    kinds = list(metadata["kind"])
+
+    rng = np.random.default_rng(0)
+    train_mask = np.zeros(len(metadata), dtype=bool)
+    test_mask = np.zeros(len(metadata), dtype=bool)
+    by_kind: dict[str, list[int]] = {}
+    for i, k in enumerate(kinds):
+        by_kind.setdefault(k, []).append(i)
+    for k, members in by_kind.items():
+        rng.shuffle(members)
+        cut = max(1, int(len(members) * 0.7))
+        train_mask[members[:cut]] = True
+        if len(members) > cut:
+            test_mask[members[cut:]] = True
+
+    # Align node order to metadata order so the baseline's features/labels match.
+    node_ids = metadata["resource_id"].tolist()
+    # Subset the graph to just the labeled nodes to keep the test fast.
+    sub = g.subgraph(node_ids).copy()
+
+    # Tiny config for test speed — the production config in benchmark.py uses
+    # walk_length=20, walks_per_node=10, n_epochs=5 (gensim epochs over walks).
+    result = run_node2vec(
+        sub, node_ids, feats_norm.values, y, train_mask, test_mask, kinds,
+        embedding_dim=16, walk_length=8, context_size=4, walks_per_node=4,
+        n_epochs=3, seed=11,
+    )
+    random_baseline = 1.0 / len(TEAMS)
+    assert result.test_acc > random_baseline, (
+        f"node2vec+LR test_acc={result.test_acc:.3f} should beat random "
+        f"baseline {random_baseline:.3f}"
+    )
+    assert result.name == "node2vec+LR"
+    assert result.predictions.shape == y.shape
+    assert result.confidences.shape == y.shape

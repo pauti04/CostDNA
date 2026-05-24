@@ -21,7 +21,7 @@ from sklearn.metrics import confusion_matrix as sk_confusion
 from costdna import TEAMS
 from costdna.baselines import (BaselineResult, majority_baseline,
                                run_knn, run_label_propagation,
-                               run_logistic_regression)
+                               run_logistic_regression, run_node2vec)
 from costdna.train import TrainResult
 
 
@@ -81,12 +81,18 @@ def run_benchmark(
 
     rows: list[BenchmarkRow] = []
 
+    node_ids = list(graph.nodes)
     for fn, name_args in [
         (lambda: majority_baseline(y, train_mask, test_mask, kinds, n_classes), ()),
         (lambda: run_logistic_regression(features_arr, y, train_mask, test_mask, kinds), ()),
         (lambda: run_knn(features_arr, y, train_mask, test_mask, kinds), ()),
-        (lambda: run_label_propagation(graph, list(graph.nodes), y,
+        (lambda: run_label_propagation(graph, node_ids, y,
                                        train_mask, test_mask, kinds, n_classes), ()),
+        # Node2Vec is the strongest non-message-passing graph baseline. If
+        # GraphSAGE only marginally beats it, the message-passing machinery
+        # isn't earning its complexity.
+        (lambda: run_node2vec(graph, node_ids, features_arr, y,
+                              train_mask, test_mask, kinds, seed=seed), ()),
     ]:
         b: BaselineResult = fn()
         rows.append(_to_row(b.name, b.predictions, b.confidences, b.train_acc,
@@ -298,15 +304,19 @@ def run_benchmark_kfold(
             import torch
             from costdna.baselines import (majority_baseline, run_knn,
                                             run_label_propagation,
-                                            run_logistic_regression)
+                                            run_logistic_regression,
+                                            run_node2vec)
             y = data.y.cpu().numpy()
+            node_ids = list(graph.nodes)
             rows: list[BenchmarkRow] = []
             for b in [
                 majority_baseline(y, train_mask, test_mask, kinds, n_classes),
                 run_logistic_regression(features_arr, y, train_mask, test_mask, kinds),
                 run_knn(features_arr, y, train_mask, test_mask, kinds),
-                run_label_propagation(graph, list(graph.nodes), y, train_mask,
+                run_label_propagation(graph, node_ids, y, train_mask,
                                       test_mask, kinds, n_classes),
+                run_node2vec(graph, node_ids, features_arr, y, train_mask,
+                             test_mask, kinds, seed=seed + fold),
             ]:
                 rows.append(_to_row(b.name, b.predictions, b.confidences,
                                     b.train_acc, b.test_acc, b.per_kind,
