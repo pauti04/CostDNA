@@ -2,6 +2,7 @@ import Image from "next/image";
 import CodeBlock from "@/components/CodeBlock";
 import FadeIn from "@/components/FadeIn";
 import AskLive from "@/components/AskLive";
+import AuditChecker from "@/components/AuditChecker";
 import ExampleConversation from "@/components/ExampleConversation";
 
 const GH_URL = "https://github.com/pauti04/CostDNA";
@@ -278,6 +279,27 @@ export default function Home() {
                 audit should be a minimum standard before reporting cloud-attribution
                 accuracy.
               </p>
+            </FadeIn>
+
+            {/* Interactive audit checker — the claim becomes runnable. */}
+            <FadeIn delay={0.30}>
+              <div className="mt-12">
+                <div className="flex items-baseline justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-text">
+                    Run the audit on your own data
+                  </h3>
+                  <span className="text-[11px] uppercase tracking-wider font-mono text-text-muted">
+                    client-side · zero upload
+                  </span>
+                </div>
+                <p className="text-sm text-text-soft mb-5">
+                  Pure JavaScript port of <code className="font-mono text-xs bg-bg-soft px-1.5 py-0.5 rounded">costdna.audit.find_deterministic_edges</code>.
+                  Drop any CSV; if a candidate column maps 1:1 to your target,
+                  it&apos;s flagged. The full Python implementation is at{" "}
+                  <a href={`${GH_URL}/blob/main/src/costdna/audit.py`} className="underline" target="_blank">src/costdna/audit.py</a>.
+                </p>
+                <AuditChecker />
+              </div>
             </FadeIn>
           </div>
         </div>
