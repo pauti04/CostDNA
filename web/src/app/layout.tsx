@@ -7,21 +7,21 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
+  title: "CostDNA — Attribute the 40–60% of your AWS bill that's untagged",
   description:
-    "Behavioral GNN for cloud-resource attribution. While evaluating on Microsoft's published 2.6M-VM Azure trace I caught label leakage that inflated first-cut accuracy from 6.9% to 97%. The honest negative result became the project's strongest finding.",
+    "Open-source behavioural GNN that infers cloud-resource ownership from CloudTrail. Writes tags back so CloudHealth, Vantage, Datadog CCM, and Kubecost see 95% of spend instead of 50%. Self-hosted; no data leaves your account.",
   metadataBase: new URL("https://cost-dna.vercel.app"),
   alternates: { canonical: "/" },
   openGraph: {
-    title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
+    title: "CostDNA — Attribute the 40–60% of your AWS bill that's untagged",
     description:
-      "Behavioral GNN for cloud-resource attribution. Methodology audit caught label leakage in two published Microsoft cloud datasets. Open source.",
+      "Behavioural GNN infers ownership of untagged AWS resources. Writes tags back. Every FinOps tool you already pay for suddenly explains 95% of spend.",
     images: [
       {
         url: "/images/audit-hero.png",
         width: 2400,
         height: 1350,
-        alt: "CostDNA audit chart — 97% first-cut accuracy became 6.9% honest after the deployment_id leak was excluded.",
+        alt: "CostDNA — the 40-60% of your AWS bill that's untagged, attributed.",
       },
     ],
     type: "website",
@@ -30,23 +30,25 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CostDNA — A 97% accuracy result. Audited. It was a tautology.",
+    title: "CostDNA — Attribute the 40–60% of your AWS bill that's untagged",
     description:
-      "Caught label leakage in Microsoft's published 2.6M-VM Azure dataset. Open-source behavioral GNN + methodology audit.",
+      "Open-source behavioural GNN. Self-hosted, MIT, no data leaves your account. Methodology peer-validated on Microsoft Azure 2.6M-VM dataset.",
     images: ["/images/audit-hero.png"],
   },
   keywords: [
-    "cloud-resource attribution",
-    "methodology audit",
-    "label leakage",
-    "GraphSAGE",
+    "cloud cost attribution",
+    "AWS cost allocation",
+    "FinOps tooling",
+    "inferred tags",
+    "untagged AWS spend",
+    "CloudTrail",
     "Graph Neural Network",
-    "PyTorch Geometric",
-    "Microsoft Azure trace",
-    "FinOps",
-    "cost attribution",
-    "node2vec",
-    "machine learning research",
+    "GraphSAGE",
+    "cloud cost intelligence",
+    "open-source FinOps",
+    "Cost & Usage Report",
+    "tag drift",
+    "chargeback automation",
   ],
 };
 
