@@ -1,39 +1,141 @@
-# Show HN draft — audit-first version
+# Launch kit — channel-segmented
 
-*Edit before submitting. The title is the most important thing — HN front-page makes or breaks on the title.*
+The single most important lesson about launching this: **the framing
+that wins depends on the channel.** HN and r/MachineLearning reward the
+audit (a methodology critique with a pandas one-liner is catnip there).
+r/aws, r/devops, Product Hunt, and FinOps communities reward the
+product (untagged-spend attribution they can try in 90 seconds).
+
+Don't post the same copy everywhere. Pick the track per channel.
+
+| Channel | Track | Why |
+|---|---|---|
+| Hacker News | **Audit-first** | HN upvotes rigour and contrarian methodology findings |
+| lobste.rs | Audit-first | Same, more technical |
+| r/MachineLearning | Audit-first | The label-leakage thesis is the hook |
+| r/aws | **Product-first** | They have the untagged-spend pain right now |
+| r/devops | Product-first | Same |
+| r/FinOps | Product-first | Exactly the buyer |
+| Product Hunt | Product-first | Product audience, not research |
+| LinkedIn | Product-first (audit as proof) | Mixed audience; lead product, prove with audit |
+| Twitter/X | Either — see THREAD.md | Thread can carry both arcs |
 
 ---
 
-## Title (pick one — A and C are strongest for the new framing)
+# TRACK A — Product-first (r/aws, r/devops, r/FinOps, Product Hunt, LinkedIn)
 
-**A. Show HN: I caught label leakage in Microsoft's 2.6M-VM Azure dataset. Here's the audit. (preferred)**
+## Title
 
-**B. Show HN: A two-line pandas check that turned my 97% accuracy into 6.9%**
+**A1. CostDNA — attribute the 40–60% of your AWS bill that's untagged (open source)** ← preferred
+**A2. I built an open-source tool that infers ownership of untagged AWS resources from CloudTrail**
+**A3. Show HN: CostDNA — the inferred-tags layer that makes your FinOps dashboard work on 100% of spend**
 
-**C. Show HN: CostDNA — methodology audit on two published cloud-attribution datasets**
+(A3 only if posting to HN as the product — but for HN, Track B usually wins.)
 
-D. Show HN: Behavioral GNN for cloud-cost attribution (and the audit that made the negative result the contribution)
+## URL
 
-A is the strongest because it leads with the specific finding (Microsoft Azure 2.6M VMs, a recognized dataset) and the active verb ("caught"). B leans into the pandas one-liner which is the most-screenshotable artifact. C is the most academic; use for lobste.rs / r/MachineLearning. D is the longest but most accurate.
+https://cost-dna.vercel.app  (Product Hunt / Reddit)
+https://github.com/pauti04/CostDNA  (Show HN)
+
+## Body
+
+Every FinOps team hits the same wall: 40–60% of AWS spend is on
+resources nobody tagged. Tags drift, engineers leave, resources get
+created in a hurry. Your CloudHealth / Vantage / Datadog CCM dashboard
+is only as good as your tags — so half your bill shows up as one giant
+"untagged" bucket, and the CFO's "why is RDS up 30%?" gets answered by
+hand every month.
+
+CostDNA infers the missing ownership from behaviour — who calls the
+resource's API, with what IAM role, at what times, in what cost-shape —
+using a graph neural network, then writes the inferred tags back to
+AWS. Your existing dashboard suddenly explains 95% of spend instead of
+50%. It's not a CloudHealth replacement; it's the input layer that
+makes CloudHealth work on the spend it currently can't see.
+
+**Try it in 90 seconds, no signup:** drop your Cost & Usage Report at
+https://cost-dna.vercel.app/your-account — it's parsed in your browser,
+nothing uploaded, and you get a per-team breakdown of your untagged
+spend. The full GraphSAGE pipeline is in the open-source CLI
+(`pip install costdna`, runs read-only against your account, nothing
+leaves it).
+
+On a real labelled AWS environment it hit 13/15 = 87% per-resource
+accuracy, with all 13 high-confidence predictions correct. Calibrated
+(ECE = 0.001), so the confidence column is actually trustworthy for a
+chargeback conversation.
+
+The part I'm proudest of is the honesty: while validating on Microsoft's
+published 2.6M-VM Azure dataset I caught label leakage that had inflated
+my own accuracy from 6.9% to 97% — and I checked the audit into the repo
+as a reusable function so you can run it on your own data. That's why I
+trust the inferred tags enough to write them back.
+
+MIT licensed. Self-hosted. Read-only IAM. Security model at
+https://github.com/pauti04/CostDNA/blob/main/docs/security.md
+
+Looking for design-partner pilots: if your team owns an AWS bill with a
+big untagged bucket and you'd run this on a non-prod account for 30
+minutes of feedback, I'd love to talk.
+
+## Reply-to-self comment (post within 5 min)
+
+The IAM policy is read-only and short — that's usually the first
+question:
+
+```
+cloudtrail:LookupEvents, ec2:Describe*, iam:List*, ce:Get*,
+rds:Describe*, s3:List*
+```
+
+Tag write-back is a separate, explicit grant gated behind `--dry-run`
+by default, and it only ever touches resources already marked
+`managed_by=costdna`. Full threat model: docs/security.md.
+
+---
+
+# TRACK B — Audit-first (Hacker News, lobste.rs, r/MachineLearning)
+
+## Title
+
+**B1. Show HN: I caught label leakage in Microsoft's 2.6M-VM Azure dataset. Here's the audit.** ← preferred for HN
+**B2. A two-line pandas check that turned my 97% accuracy into 6.9%**
+**B3. Show HN: CostDNA — methodology audit on two published cloud-attribution datasets**
+
+B1 leads with the specific finding + active verb. B2 leans on the
+most-screenshotable artifact. B3 is the academic framing for lobste.rs.
 
 ## URL
 
 https://github.com/pauti04/CostDNA
 
-## Body (audit-first)
+## Body
 
-I built [CostDNA](https://github.com/pauti04/CostDNA), an open-source graph neural network for cloud-resource attribution. While evaluating on Microsoft's published 2.6M-VM Azure trace I hit 97% accuracy on a 100-class problem. That number was too good. I ran a two-line audit:
+I built [CostDNA](https://github.com/pauti04/CostDNA), an open-source
+graph neural network that infers ownership of untagged AWS resources.
+While validating on Microsoft's published 2.6M-VM Azure trace I hit 97%
+accuracy on a 100-class problem. That number was too good. I ran a
+two-line audit:
 
 ```python
 (df.groupby("deployment_id")["subscription_id"].nunique() == 1).mean()
 # → 1.0
 ```
 
-Across all 33,205 deployments in the dataset, every single one belonged to exactly one subscription. The graph edge I was using was a perfect lookup of the prediction target. With the leak removed, honest GraphSAGE accuracy on 100 classes was **6.9%** — still 12× random, still beats every non-graph baseline including node2vec, but a long way from 97%.
+Across all 33,205 deployments in the dataset, every single one belonged
+to exactly one subscription. The graph edge I was using was a perfect
+lookup of the prediction target. With the leak removed, honest GraphSAGE
+accuracy on 100 classes was **6.9%** — still 12× random, still beats
+every non-graph baseline including node2vec, but a long way from 97%.
 
-I ran the same audit on Microsoft Philly's 117K-DL-job trace. Found another partial leak: 85% of users belong to exactly one virtual cluster. With user edges removed: 15%.
+I ran the same audit on Microsoft Philly's 117K-DL-job trace. Found
+another partial leak: 85% of users belong to exactly one virtual
+cluster. With user edges removed: 15%.
 
-Two unrelated public datasets, same pattern. I argue prior published work in cloud-resource attribution has likely been measuring leakage rather than learning, and propose a two-line pandas check as a minimum standard before reporting cloud-attribution accuracy:
+Two unrelated public datasets, same pattern. I argue prior published
+work in cloud-resource attribution has likely been measuring leakage
+rather than learning, and propose a two-line pandas check as a minimum
+standard before reporting cloud-attribution accuracy:
 
 ```python
 def find_deterministic_edges(df, target_col, candidate_edge_cols, threshold=0.85):
@@ -45,89 +147,84 @@ def find_deterministic_edges(df, target_col, candidate_edge_cols, threshold=0.85
     return out
 ```
 
-**What this means in practice:** if your cloud-attribution paper uses `deployment_id` (or `request_id`, or `user_id`, or `cluster_id`) as a graph signal without running the audit, your reported accuracy is probably inflated. Behavioral attribution on its own — without the structural shortcuts — is much harder than the headlines suggest. The synthetic environment in the repo demonstrates the regime where behavioral GNNs actually earn their complexity (and where they don't).
+**What this means in practice:** if your cloud-attribution work uses
+`deployment_id` (or `request_id`, `user_id`, `cluster_id`) as a graph
+signal without running the audit, your reported accuracy is probably
+inflated. Behavioural attribution on its own — without the structural
+shortcuts — is much harder than the headlines suggest.
 
-**About the project itself:** CostDNA is a research-tone open-source project documenting the audit. It includes proper baselines (LogReg, k-NN, LabelProp, node2vec+LogReg, GraphSAGE), an explicit limitations doc, and the 2.6M-VM-trace post-audit results table. There's an optional natural-language interface (10-tool agent on GPT-4o function-calling) but that's not the contribution — the audit is.
+The repo is a real product (it infers untagged-resource ownership and
+writes tags back so your FinOps dashboard works on 100% of spend), but
+the contribution I care about is the audit. Proper baselines (LogReg,
+k-NN, LabelProp, node2vec, GraphSAGE), an explicit limitations doc, and
+the audit checked in as a reusable function you can run on your own data
+at https://cost-dna.vercel.app/#trust
 
-Stack: Python 3.11, PyTorch + PyG, gensim (node2vec), sentence-transformers (MiniLM), scikit-learn, statsmodels, boto3 (hardened), Next.js + Vercel (optional UI), Terraform (labeled test env).
+Stack: Python 3.11, PyTorch + PyG, gensim (node2vec), sentence-
+transformers, scikit-learn, statsmodels, boto3, Next.js + Vercel,
+Terraform.
 
-Live demo: https://cost-dna.vercel.app
-Audit writeup: https://github.com/pauti04/CostDNA#the-audit
-Limitations: https://github.com/pauti04/CostDNA/blob/main/docs/limitations.md
-Blog post: https://github.com/pauti04/CostDNA/blob/main/docs/blog-post-audit.md
+Looking for: counterexamples — public cloud datasets that are rich in
+behavioural features AND don't have the structural-metadata leak. I'd
+love to test there. Genuine counterexamples make the contribution
+sharper, not weaker.
 
-Looking for: counterexamples (public cloud datasets that are rich in behavioral features AND don't have the structural-metadata leak — I'd love to test there), and feedback on the methodology thesis. Genuine counterexamples make the contribution sharper, not weaker.
+## Reply-to-self comment (post within 5 min)
 
-Self-disclosure: I'm currently job-hunting for cloud-cost / FinOps / ML-infra roles. If this kind of work is interesting to your team, please reach out.
-
----
-
-## Reply-to-your-own-thread comment (post within 5 minutes)
-
-The substantive first-reply that pushes the thread up:
-
-```
-For anyone wanting to run the audit on their own dataset, the entire check is:
-
-  (df.groupby("edge_column")["target_column"].nunique() == 1).mean()
-
-If that returns close to 1.0, your "edge" is a tautological lookup of the
-answer. I checked four edge candidates on the Azure trace — deployment_id was
-1.000, the others were under 0.20. One value above 0.85 is enough to invalidate
-a benchmark accuracy claim.
-
-The full check function with a threshold is in docs/limitations.md §6.
-```
+The full audit check as a reusable function lives at
+`src/costdna/audit.py`, and there's an in-browser version at
+cost-dna.vercel.app/#trust — drop a CSV, it flags any column that maps
+1:1 to your target. Two lines of pandas; catches the failure mode that
+inflated two published Microsoft datasets.
 
 ---
 
-## Comment-prep — anticipate these and have answers ready
+# Comment-prep — answers ready for both tracks
 
 **"Isn't this just standard label leakage?"**
-Yes — label leakage is well-known. What's specific to cloud-attribution is the *form* of the leak: structural metadata (deployment IDs, IAM principals, user IDs) is so close to the prediction target in published cloud datasets that it's easy to accidentally include as a graph edge. The audit pattern is general; the application to cloud-data is the contribution.
+Yes. What's specific to cloud-attribution is the *form*: structural
+metadata (deployment IDs, IAM principals, user IDs) sits so close to the
+prediction target in cloud datasets that it's trivially easy to include
+as a graph edge. The audit pattern is general; the application is the
+contribution.
 
-**"6.9% on 100 classes is bad. Why publish?"**
-6.9% is 12× random (random = 1%), and it beats every feature-only baseline including node2vec on the same regime. The point isn't that 6.9% is good — it's that 6.9% is honest. The 97% wasn't. Reporting the honest negative number, plus the audit methodology that caught the inflated one, is the contribution.
+**"6.9% on 100 classes is bad. Why ship it?"**
+6.9% is 12× random and beats every feature-only baseline including
+node2vec. The point isn't that 6.9% is good — it's that it's honest.
+The 97% wasn't. On a real AWS account with full CloudTrail (not Azure's
+summary-stats-only trace) the lift is materially larger; that's the
+synthetic env's controlled result.
 
-**"Why GNN over a simpler model?"**
-On the synthetic env, GraphSAGE doesn't dominate node2vec+LR overall (both around 92%). It earns its complexity *specifically* on the two hardest kinds — cross_team and reassigned resources. Honest comparison table in docs/v2/results-phase2.md.
+**"How is this different from Vantage / CloudHealth / Kubecost?"**
+Those read tags (or k8s metadata). CostDNA *infers* tags for the 40–60%
+that don't have them, then writes them back so those tools work. It's
+upstream of them, not competing.
 
-**"How do you handle the 100% subscription leak in production?"**
-You don't — if the metadata is deterministic, just use it. CostDNA's value prop is the behavioral fallback for resources where metadata is missing or has drifted. The audit makes that scope explicit instead of papering over it with inflated numbers.
+**"What's the IAM policy?"**
+Read-only: `cloudtrail:LookupEvents`, `ec2:Describe*`, `iam:List*`,
+`ce:Get*`, `rds:Describe*`, `s3:List*`. Write-back is separate, gated
+behind `--dry-run`, scoped to `managed_by=costdna` resources.
 
-**"What if I don't have CloudTrail data events?"**
-Management events are ~free (1.5% of API call volume) and they include the IAM role + source IP that drive most of the behavioral signal. Data events (S3 object-level, Lambda invoke) cost more — CostDNA falls back gracefully to management-only.
+**"Does my data leave my account?"**
+Self-hosted CLI: no. In-browser CUR scan: no (client-side PapaParse).
+The only network path is the optional GPT-4o natural-language interface,
+which is off by default.
 
-**"Is the synthetic env realistic?"**
-It's a Terraform-able 4-team AWS account with deliberate hard cases (shared services, cross-team resources, reassigned ownership). The feature density matches what real CloudTrail provides. It's not a substitute for production data, but it's where the methodology validates cleanly without the metadata-lookup tautologies that dominate real cloud datasets. Honest framing: treat synthetic numbers as ablation, not headline.
-
-**"Live demo costs?"**
-~$0.01/question on OpenAI. Rate-limited to 5 questions/IP/hour. Cap at $5/day on the OpenAI key.
-
-**"Why is multi-cloud only partially validated?"**
-AWS is engineering-validated (Terraform pilot, 13/15 = 87%). Azure is methodology-validated via the published trace. GCP collectors exist but await a live run. Honest scope statement in the README and docs/limitations.md §4.
+**"Live demo cost?"**
+~$0.01/question on OpenAI, rate-limited to 5/IP/hour, $5/day cap.
 
 ---
 
-## Submission timing
+# Submission timing
 
-- **Best windows for HN front page:** Tuesday-Thursday, 9-11am EST. Avoid weekends (lower traffic) and Mondays (post-weekend backlog).
-- **Frontload engagement:** comment on your own post within 5 minutes with the substantive reply above (the pandas one-liner block). Replies push posts up the new page.
-- **Don't ask people to upvote.** HN auto-flags posts that get sudden traffic from off-site.
-- **Have a friend or two upvote in the first 30 minutes** — getting from 1 to 5 votes fast is the hardest part. After 5, momentum carries.
+- **HN:** Tuesday–Thursday, 8–10am EST. Comment your substantive
+  reply-to-self within 5 minutes. Never ask for upvotes (auto-flagged).
+- **Reddit:** weekday mornings in the target sub's timezone. r/aws and
+  r/devops are US-heavy; post 9–11am EST.
+- **Product Hunt:** launch at 12:01am PST (PH day boundary) for a full
+  24h on the leaderboard.
+- **LinkedIn:** Tue–Thu, 8–10am in your network's timezone.
 
----
-
-## Other places to post (in priority order)
-
-| Channel | Best title variant | Notes |
-|---|---|---|
-| **lobste.rs** | A or C | Most technical audience; audit story plays best here |
-| **r/MachineLearning** | B (the pandas one-liner) | Lead with the methodology, not the product |
-| **dev.to / Hashnode** | A (full blog post) | Crosspost the docs/blog-post-audit.md; permanent SEO |
-| **r/devops** | A | Cloud-attribution angle |
-| **r/aws** | "the thing your tagging strategy is missing" | Lead with the FinOps framing |
-| **Twitter/X thread** | A | Image-attached, see docs/outreach/twitter-thread/THREAD.md |
-| **LinkedIn** | A as a featured post | Mention you're job-hunting in the same post |
-| **Hacker Newsletter** | inbound after HN front page | If A makes the front page |
-| **TLDR Newsletter / Pointer** | inbound after HN front page | Same |
+Don't launch everywhere the same day. Stagger: HN/lobste.rs first
+(audit), then a week later Reddit/PH (product) once you have the HN
+discussion to point to as social proof.

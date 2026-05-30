@@ -1,15 +1,22 @@
-# 5 personalized cold-email drafts — audit-first version
+# Cold-email playbook
 
-*Send 1-2 per day this week. Find a specific human on LinkedIn before sending — "Hi {real name}" beats "Hi team" 5:1.*
+Two distinct outreach tracks. Don't confuse them — the ask is different.
 
-**Where to find names:**
-- LinkedIn → search "{Company} engineering" or "{Company} FinOps"
-- For each, look for: founding engineer, head of engineering, principal/staff engineer, head of product
-- For a hiring email specifically, target a recruiter or hiring manager — but lead with "I found X" not "I want a job"
+- **Track 1 — FinOps vendor partnership/feedback** (Vantage, Kubecost,
+  ProsperOps, nOps, Datadog CCM). CostDNA is the *input layer* upstream
+  of these tools; the ask is "is this interesting to your eng team / would
+  you point users at it." Audit is the credibility hook. Emails 1–5 below.
+- **Track 2 — design-partner pilots** (FinOps engineers / platform leads
+  at companies that would *use* CostDNA). The ask is "run it on a non-prod
+  account, give me 30 min of feedback." Template at the bottom. **This is
+  the higher-value track for a product launch** — one real user-report is
+  worth more than any vendor reply.
 
-**Format note:** keep every one under 150 words. Recruiters get hundreds of cold emails; the ones that get replies are short and specific.
+*Send 1–2 per day. Find a specific human on LinkedIn before sending — "Hi {real name}" beats "Hi team" 5:1.*
 
-**Framing pivot:** v1 of these emails led with the product ("I built an agent that infers tags"). v2 leads with the methodology finding ("I caught label leakage in a published 2.6M-VM dataset"). Methodology-first reads as research credibility; product-first reads as another portfolio piece. The audit story is the differentiator.
+**Format note:** under 150 words each. The ones that get replies are short and specific.
+
+**Framing:** lead with the product wedge (untagged-spend attribution — the pain they have *right now*), use the audit as the credibility proof. Pure-audit framing reads as research; pure-product framing reads as another portfolio piece. Product-pain + audit-proof is the combination that converts.
 
 ---
 
@@ -23,9 +30,9 @@ I've been a long-time admirer of how Vantage handles tag-based attribution — t
 
 While building an open-source behavioral GNN for cloud-resource attribution, I tested on Microsoft's published 2.6M-VM Azure trace and hit 97% accuracy on a 100-class problem. The number was too good. A two-line `pandas` check revealed that across all 33,205 deployments in the dataset, `deployment_id` mapped 1:1 to `subscription_id` — my graph edge was a database join. Honest GraphSAGE accuracy with the leak removed: **6.9%**.
 
-I think the pattern generalizes: prior published work in cloud-attribution likely measures leakage. Posted the full audit + a reusable check at github.com/pauti04/CostDNA (MIT-licensed).
+The product angle: it's the inferred-tags layer upstream of Vantage — it attributes the 40–60% of resources your users can't tag, then writes the tags back so they show up correctly in your "Active Resources" view. The audit is why those inferred tags are trustworthy enough to write back. MIT-licensed, self-hosted, read-only IAM: github.com/pauti04/CostDNA · cost-dna.vercel.app
 
-The methodology might be relevant to anyone evaluating attribution models. I'm currently looking for cloud-cost / FinOps roles — would the work fit anything you're hiring for?
+Would this be interesting to your eng team — as a complement, or just as a methodology read? Happy to walk through it.
 
 Thanks,
 Parth
@@ -44,7 +51,7 @@ Tested on Microsoft's published 2.6M-VM Azure trace. First-cut GraphSAGE accurac
 
 Argument: published cloud-attribution work has likely been measuring leakage rather than learning. Audit + reusable check: github.com/pauti04/CostDNA · cost-dna.vercel.app
 
-If Kubecost or IBM Research is interested in methodology critiques of cloud-attribution datasets, I'd love to chat. I'm currently job-hunting for FinOps / ML-infra roles.
+CostDNA fills Kubecost's non-k8s gap (Lambda / RDS / S3 / plain EC2) by inferring ownership and writing tags back — it plugs in upstream of anything that consumes tags. If a complement-to-pod-attribution layer is interesting to your eng team, or you just want the methodology read, I'd love to chat.
 
 Thanks,
 Parth
@@ -63,7 +70,7 @@ I built CostDNA, an open-source behavioral GNN for that gap. The behind-the-curt
 
 Demo: cost-dna.vercel.app · Repo: github.com/pauti04/CostDNA · Audit writeup: in the README
 
-Looking for FinOps / ML-infra roles. Would the methodology + the behavioral attribution work fit anything you're building?
+The product fit: ProsperOps's commitment optimization is only legible per-team if you can attribute the untagged half of the account. CostDNA does that and writes the tags back. Would the attribution layer be useful upstream of what you're building? Happy to walk through it.
 
 Thanks,
 Parth
@@ -82,7 +89,7 @@ The short version: `deployment_id` (which I was using as a graph edge) maps 1:1 
 
 Same audit on Microsoft Philly's 117K-job trace exposed an 85%-deterministic `user_id → vc` shortcut. Two datasets, same finding: structural metadata dominates real cloud attribution.
 
-Open-source repo + audit writeup: github.com/pauti04/CostDNA. I'm currently job-hunting — happy to chat if you're working in this space.
+Open-source, self-hosted, read-only: github.com/pauti04/CostDNA · cost-dna.vercel.app. CostDNA is the behavioural-fallback attribution layer for the resources where structural metadata fails — upstream of a multi-cloud intelligence product like nOps. Worth a conversation?
 
 Thanks,
 Parth
@@ -101,7 +108,7 @@ I built CostDNA as an open-source upstream layer: a behavioral GNN that infers o
 
 I argue prior published cloud-attribution work likely measures leakage. Full audit + reusable check + honest numbers: github.com/pauti04/CostDNA. Demo: cost-dna.vercel.app.
 
-I'm looking for cloud-cost / FinOps roles. If anything in the CCM org or Datadog Research is hiring (or exploring tag-inference upstream), I'd love to hear about it.
+CostDNA writes inferred tags back to AWS, so CCM would see the previously-untagged 40–60% with no change on your side. If tag-inference upstream of CCM is interesting — as a complement or an acquisition-of-idea — I'd love to hear about it.
 
 Thanks,
 Parth
@@ -120,16 +127,49 @@ Before each send:
 
 ## Response handling
 
-- **"Interesting, send a calendar link"** — send your Calendly. Have a 15-min walkthrough ready that opens with the audit (90 seconds), not the demo.
-- **"We're not hiring right now"** — reply with one sentence: "Totally understand — would you forward to anyone in your network who is?" Networks compound.
-- **"What does your IAM policy look like?"** — link to `docs/evaluation.md` which has the exact JSON. Read-only `cloudtrail:LookupEvents`, `ec2:Describe*`, `iam:List*`, `ce:Get*`, `rds:Describe*`, `s3:List*`. No write perms unless explicitly opted in via `costdna apply --apply`.
-- **"Have you run it on a real production account?"** — honest answer: "I ran it on a Terraform-provisioned account I owned, 13/15 = 87% on 15 labels. The methodology validates on the Azure published trace. I haven't run it on a production customer account yet — that's exactly the kind of pilot I'd love to do."
-- **No reply after 7 days** — one polite follow-up referencing the audit specifically ("did the methodology finding land?"), then drop it. Don't double-follow-up.
+- **"Interesting, send a calendar link"** — send your scheduling link. Have a 15-min walkthrough ready that opens with the live `/your-account` scan on *their* data if they'll share a redacted CUR, else the synthetic demo, then the audit as the trust proof.
+- **"What does your IAM policy look like?"** — link to [`docs/security.md`](../security.md) which has the exact JSON. Read-only `cloudtrail:LookupEvents`, `ec2:Describe*`, `iam:List*`, `ce:Get*`, `rds:Describe*`, `s3:List*`. No write perms unless explicitly opted in via `costdna apply --apply`.
+- **"Have you run it on a real production account?"** — honest answer: "On a Terraform-provisioned account I owned, 13/15 = 87% on 15 labels, all 13 high-confidence correct. The methodology validates on the Azure published trace. I haven't run it on a *customer* production account yet — that's exactly the design-partner pilot I'm looking for."
+- **No reply after 7 days** — one polite follow-up ("did the untagged-spend angle land?"), then drop it. Don't double-follow-up.
 
-## When the audit framing might not be right
+---
 
-If the company is more product-focused than research-focused (e.g., the recipient is a hands-on PM, not an engineer), lead with the demo and the 87% on real AWS. Use the audit story as the second paragraph. Specifically:
+## Track 2 — design-partner pilot outreach (the high-value track)
 
-- **Product-leading version of any email above:** Replace the second paragraph with: *"Live demo at cost-dna.vercel.app — chat with the agent over a 68-resource AWS account. The technical interesting bit is a methodology audit I ran while evaluating on Microsoft's 2.6M-VM Azure trace; details in the README."*
+Target FinOps engineers, platform/SRE leads, and cloud-cost owners at
+companies that would *use* CostDNA — not vendors. LinkedIn search
+"FinOps", "Cloud cost", "Platform engineering" + a mid-size company
+(big enough to have an untagged-spend problem, small enough to move
+without procurement).
 
-The audit is the strongest *technical* signal. The demo is the strongest *immediately-graspable* signal. Most engineers respond to the first; most non-engineers respond to the second.
+**The ask is feedback, not a sale.** Feedback is easy to say yes to.
+
+**Subject:** does your AWS account have a big "untagged" bucket?
+
+Hi {name},
+
+Quick one — I built an open-source tool (CostDNA, MIT) that infers
+ownership of untagged AWS resources from CloudTrail behaviour and writes
+the tags back, so your existing cost dashboard explains the 40–60% that's
+currently invisible.
+
+I'm looking for a couple of design partners before calling it
+production-ready. Would you run it on a non-prod account (read-only IAM,
+self-hosted, nothing leaves your account) and tell me what breaks? 30
+minutes of your time; I'll fix whatever you hit and credit you in the
+field notes if you want.
+
+You can also see results on your own bill in 90 seconds without installing
+anything — drop a Cost & Usage Report at cost-dna.vercel.app/your-account
+(parsed in your browser, nothing uploaded).
+
+No sales pitch. I want the bug report.
+
+Thanks,
+Parth
+
+**Why this converts better than the vendor emails:** you're asking for
+feedback, not a job or a deal. A FinOps engineer with an untagged-spend
+problem and 30 free minutes says yes to "tell me what breaks" far more
+readily than to anything that smells like sales. One completed pilot →
+a field note → social proof for every subsequent email and launch post.

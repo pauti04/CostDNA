@@ -987,7 +987,7 @@ export default function Home() {
       </section>
 
       {/* ────────── INSTALL ────────── */}
-      <section className="bg-bg border-b border-border">
+      <section id="install" className="bg-bg border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-20">
           <SectionHeader number="14" title="Run it yourself" />
           <FadeIn>
@@ -1086,31 +1086,31 @@ $ costdna serve
         <div className="max-w-4xl mx-auto px-6 py-20 text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-text-on-deep mb-6">
-              The audit is the contribution.
+              See what your tags are hiding.
             </h2>
           </FadeIn>
           <FadeIn delay={0.05}>
             <p className="text-lg text-zinc-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-              MIT licensed. Methodology audit on two published cloud datasets,
-              honest baseline comparison including node2vec, explicit limitations.
-              If you&apos;re hiring for cloud-cost / FinOps / ML-infra roles —
-              I&apos;d like to do this kind of work full-time.
+              Drop your Cost &amp; Usage Report and get a per-team breakdown of
+              your untagged spend in 90 seconds — in your browser, nothing
+              uploaded. Or install the open-source CLI and run the full
+              GraphSAGE pipeline on your own account. MIT licensed, no signup.
             </p>
           </FadeIn>
           <FadeIn delay={0.10}>
             <div className="flex flex-wrap gap-3 justify-center">
               <a
-                href={GH_URL}
-                target="_blank"
+                href="/your-account"
                 className="inline-flex items-center gap-2 bg-bg-section text-text font-medium px-6 py-3 rounded-md hover:bg-bg-soft transition"
               >
-                ↗ View on GitHub
+                Try on your AWS bill →
               </a>
               <a
-                href="#audit"
+                href={GH_URL}
+                target="_blank"
                 className="inline-flex items-center gap-2 border border-zinc-600 text-text-on-deep font-medium px-6 py-3 rounded-md hover:bg-bg-deep-soft transition"
               >
-                Re-read the audit
+                ↗ View on GitHub
               </a>
             </div>
           </FadeIn>
@@ -1129,18 +1129,18 @@ $ costdna serve
                 Built by Parth Auti
               </h3>
               <p className="text-text-soft leading-relaxed mb-4">
-                I write ML and infrastructure code — graph neural networks for
-                cloud-cost attribution most recently, but anything where
-                methodology matters more than headline numbers. CostDNA is the
-                project I&apos;d most like to be remembered for: a behavioural GNN
-                that caught label leakage in two published Microsoft cloud
-                datasets, with the audit methodology checked into the repo as
-                a reusable function.
+                CostDNA started as a question: how much of an AWS bill can you
+                attribute without tags? The answer turned out to depend
+                entirely on doing the methodology honestly — which is why the
+                audit that caught label leakage in two published Microsoft
+                datasets is checked into the repo as a reusable function, not
+                buried in a paper.
               </p>
               <p className="text-text-soft leading-relaxed mb-6">
-                I&apos;m currently looking for full-time roles in{" "}
-                <b className="text-text">cloud-cost / FinOps / ML-infra</b>.
-                If this is the kind of work your team does, I&apos;d like to chat.
+                <b className="text-text">Looking for design-partner pilots.</b>{" "}
+                If your team owns an AWS bill with a big &quot;untagged&quot; bucket
+                and you&apos;d run CostDNA on a non-prod account in exchange for
+                30 minutes of feedback, I&apos;d like to talk.
               </p>
               <div className="flex flex-wrap gap-3 text-sm">
                 <a

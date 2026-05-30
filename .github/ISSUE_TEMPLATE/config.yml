@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/pauti04/CostDNA/security/advisories/new
+    about: Do NOT open a public issue for security reports. Use a private advisory or email parth.auti@gmail.com.
+  - name: Try it on your AWS bill (no signup)
+    url: https://cost-dna.vercel.app/your-account
+    about: Drop your Cost & Usage Report and get a per-team breakdown in your browser — nothing uploaded.
+  - name: Managed-scan waitlist / pilot
+    url: mailto:parth.auti@gmail.com
+    about: Want CostDNA run on your account, or a design-partner pilot? Email the maintainer.

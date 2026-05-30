@@ -1,11 +1,18 @@
-# Twitter / X thread — copy-paste ready (audit-first version)
+# Twitter / X thread — copy-paste ready
 
-8 tweets. Image attachments noted. Character counts under each tweet (270 max
-to stay under the 280 limit with safety margin).
+Two threads. Pick by audience:
+
+- **Thread A — product-first** (DevOps/FinOps Twitter, general dev
+  audience). Leads with the untagged-spend pain. Audit is the
+  credibility beat. **Use this for the main launch.**
+- **Thread B — audit-first** (ML Twitter, researchers). Leads with the
+  "I audited my own 97% and it was a tautology" arc. Further down.
+
+Char counts under each tweet (270 max for 280-limit safety margin).
 
 **Best time to post**: Tuesday-Thursday, 9-11am or 7-9pm EST. Reply to
-your own first tweet within 5 minutes with the substantive comment at the
-bottom of this doc to push the thread up the timeline.
+your own first tweet within 5 minutes with a substantive comment to
+push the thread up the timeline.
 
 **Post-thread checklist**:
 - [ ] DM the tweet URL to 5 friends asking for a like+retweet (off-Twitter
@@ -14,6 +21,109 @@ bottom of this doc to push the thread up the timeline.
 - [ ] Pin the thread to your profile.
 
 ---
+
+# THREAD A — product-first (main launch)
+
+## A1 (the hook)
+
+**Image:** screenshot of `/your-account` per-team breakdown, or `01-hero.png`
+
+```
+40–60% of your AWS bill is on resources nobody tagged.
+
+Your cost dashboard shows it as one giant "untagged" bucket. The CFO asks
+"why is RDS up 30%?" and you chase it down by hand.
+
+I built an open-source tool that infers the missing owners. 🧵
+```
+
+(264 chars)
+
+## A2 (how it works)
+
+```
+CostDNA infers which team owns each untagged resource from behaviour —
+who calls its API, with what IAM role, at what times, in what cost-shape
+— using a graph neural network. Then it writes the tags back to AWS.
+
+Your existing FinOps tool suddenly sees 95% of spend instead of 50%.
+```
+
+(269 chars)
+
+## A3 (try it — the killer CTA)
+
+**Image:** the `/your-account` drop-zone + result
+
+```
+You can see it on your own bill in 90 seconds, no signup:
+
+Drop your Cost & Usage Report → cost-dna.vercel.app/your-account
+
+Parsed in your browser. Nothing uploaded. You get a per-team breakdown
+of the spend your tags are currently hiding.
+```
+
+(255 chars)
+
+## A4 (it's not a dashboard replacement)
+
+```
+It's not a CloudHealth/Vantage/Kubecost replacement.
+
+It's the input layer *upstream* of them — it attributes the untagged
+resources those tools can't see, writes the tags back, and then your
+dashboard works on 100% of spend instead of the tagged half.
+```
+
+(269 chars)
+
+## A5 (the trust beat — audit as proof)
+
+**Image:** `03-audit.png` (97% → 6.9%)
+
+```
+Why trust inferred tags in a chargeback conversation?
+
+Because I audited the model hard. On Microsoft's published 2.6M-VM Azure
+dataset I caught label leakage that had inflated my own accuracy from
+6.9% to 97% — and checked the audit into the repo so you can run it too.
+```
+
+(268 chars)
+
+## A6 (the close)
+
+```
+Open source (MIT). Self-hosted. Read-only IAM. Nothing leaves your account.
+
+Real-AWS test: 13/15 resources correct, all 13 high-confidence right.
+
+Try it: cost-dna.vercel.app
+Code: github.com/pauti04/CostDNA
+
+Looking for design-partner pilots 👇
+```
+
+(252 chars)
+
+## Reply-to-self (post within 5 min)
+
+```
+The IAM scope is read-only and short — usually the first question:
+
+cloudtrail:LookupEvents, ec2:Describe*, iam:List*, ce:Get*,
+rds:Describe*, s3:List*
+
+Tag write-back is separate, gated behind --dry-run, and only touches
+resources marked managed_by=costdna. Full threat model in the repo.
+```
+
+(263 chars)
+
+---
+
+# THREAD B — audit-first (ML Twitter / researchers)
 
 ## Tweet 1 (the hook)
 
