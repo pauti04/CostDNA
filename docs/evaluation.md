@@ -14,7 +14,7 @@ You then either review the predictions (low confidence ones) or apply them as AW
 
 - Not a dashboard. It's an input layer for the dashboard you already use.
 - Not k8s-only. Works on any AWS resource that emits CloudTrail.
-- Not magic. Confidence scores are calibrated (ECE = 0.001 in our tests), so when it says 0.6 it's right 60% of the time. You decide which threshold to trust.
+- Not magic. Confidence is calibrated post-hoc via temperature scaling (Guo et al.); on the synthetic benchmark held-out ECE sits in the low single-digit percents (≈0.00–0.10 across seeds) because accuracy is already high. You decide which threshold to trust.
 - Not making API calls outside read-only AWS — no third-party SaaS, no data leaves your account during the scan.
 
 ## How a single evaluation runs

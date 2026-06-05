@@ -224,7 +224,7 @@ Reproducibility: scan outputs (predictions.csv, executive summary, explanations)
 
 ## Calibration, anomaly detection, active learning
 
-**Calibration.** `costdna calibrate` measures Expected Calibration Error. Our ECE = **0.001** (0 = perfectly calibrated) via post-hoc temperature scaling on validation. When the model says 0.7 confidence, it's right 70% of the time. The active-learning loop and the `apply --threshold` flag both rely on this being honest.
+**Calibration.** `costdna calibrate` fits a post-hoc temperature (Guo et al., 2017) on a held-out calibration split and reports Expected Calibration Error on a *separate* eval split — so the number isn't fit on the data it's measured on. On the synthetic benchmark the model is already roughly calibrated because accuracy is high: **held-out ECE sits in the low single-digit percents (≈0.00–0.10 across seeds, median ~0.05)**, and on this small-data regime temperature scaling *confirms* calibration rather than meaningfully improving it (the held-out split is too small for the temperature fit to reliably help). Honest caveats: (1) this is synthetic, not the harder 6.9% Azure regime where calibration would matter more; (2) on ~60 labeled nodes the per-seed ECE is itself noisy. See [`docs/limitations.md`](docs/limitations.md). The `apply --threshold` cutoff relies on this confidence being meaningful.
 
 **Anomaly detection.** Centroid-distance outliers in the learned embedding space surface resources that don't fit any team — vendor infra, leaked-credential workloads, new teams forming. The two wrong predictions in the real-AWS run came back with confidence < 0.7 and were flagged by `find_anomalies` for human review. That's the active-learning workflow by design.
 

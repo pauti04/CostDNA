@@ -156,7 +156,7 @@ export default function Home() {
               {
                 eyebrow: "Engineering leader",
                 head: "Per-team chargeback is impossible at your current tag coverage.",
-                body: "You can't budget by team if 50% of spend is in 'untagged.' CostDNA's inferred attributions plus calibrated confidence (ECE = 0.001) let you publish a per-team P&L with explicit confidence bands — so the conversation is about numbers, not about whether the numbers are right.",
+                body: "You can't budget by team if 50% of spend is in 'untagged.' CostDNA's inferred attributions come with calibrated confidence (post-hoc temperature scaling) so you can publish a per-team P&L with explicit confidence bands — and exclude anything below your threshold from the chargeback rather than guessing.",
               },
             ].map((p, i) => (
               <FadeIn key={p.eyebrow} delay={i * 0.05}>
@@ -726,7 +726,7 @@ export default function Home() {
               {
                 num: "3",
                 title: "Train",
-                body: "2-or-4-layer GraphSAGE classifier with supervised contrastive head. Auto-shrinks (2-layer / hidden=8 / dropout=0.4) when n_labels < 30. Class-weighted loss + stratified split. Calibrated post-hoc (ECE=0.001).",
+                body: "2-or-4-layer GraphSAGE classifier with supervised contrastive head. Auto-shrinks (2-layer / hidden=8 / dropout=0.4) when n_labels < 30. Class-weighted loss + stratified split. Confidence calibrated post-hoc via temperature scaling (Guo et al.).",
               },
             ].map((step, i) => (
               <FadeIn key={step.num} delay={i * 0.05}>

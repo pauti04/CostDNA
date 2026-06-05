@@ -151,8 +151,10 @@ the right inductive bias for this task."
 ## Section 06 — Calibration / anomaly / active learning
 
 Compress current sections "Active learning," "Anomaly detection," "Calibrated
-confidence" into one section. Keep the ECE = 0.001 number, keep the active
-learning curve, keep the anomaly examples. ~60 lines total.
+confidence" into one section. Report calibration honestly (post-hoc
+temperature scaling, Guo et al.; held-out ECE ≈0.001–0.05 by seed on
+synthetic — not a flat 0.001), keep the active learning curve, keep the
+anomaly examples. ~60 lines total.
 
 ---
 

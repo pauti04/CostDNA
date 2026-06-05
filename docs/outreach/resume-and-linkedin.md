@@ -40,7 +40,7 @@ LinkedIn → your profile → "Add profile section" → "Recommended" → "Add f
 >
 > Confirmed the same pattern on Microsoft Philly's 117K-DL-job trace (`user_id → vc` is 85% deterministic). Two unrelated published datasets, same finding. The project argues that prior published work in cloud-resource attribution has likely been measuring leakage rather than learning, and proposes a two-line `pandas` audit as a minimum methodology standard before reporting accuracy.
 >
-> Includes proper baselines (LogReg, k-NN, LabelProp, node2vec+LR, GraphSAGE), an explicit limitations document, the Azure post-audit results table, a calibration analysis (ECE = 0.001), and an optional natural-language interface layer (10-tool function-calling agent on GPT-4o). The agent is interface convenience; the audit is the contribution.
+> Includes proper baselines (LogReg, k-NN, LabelProp, node2vec+LR, GraphSAGE), an explicit limitations document, the Azure post-audit results table, post-hoc confidence calibration via temperature scaling (Guo et al.), and an optional natural-language interface layer (10-tool function-calling agent on GPT-4o). The agent is interface convenience; the audit is the contribution.
 >
 > Stack: Python 3.11, PyTorch + PyTorch Geometric (GraphSAGE), gensim (node2vec biased random walks), sentence-transformers (MiniLM semantic features), scikit-learn (baselines), statsmodels (Granger causality), boto3 (hardened collectors), Next.js + Vercel (landing page + optional serverless agent endpoint), Terraform (4-team labeled test environment), Docker + GitHub Actions (release pipeline). 14-command Python CLI.
 >

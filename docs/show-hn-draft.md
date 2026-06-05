@@ -61,9 +61,9 @@ spend. The full GraphSAGE pipeline is in the open-source CLI
 leaves it).
 
 On a real labelled AWS environment it hit 13/15 = 87% per-resource
-accuracy, with all 13 high-confidence predictions correct. Calibrated
-(ECE = 0.001), so the confidence column is actually trustworthy for a
-chargeback conversation.
+accuracy, with all 13 high-confidence predictions correct. Confidence is
+calibrated post-hoc via temperature scaling, so the confidence column is
+something you can actually threshold on in a chargeback conversation.
 
 The part I'm proudest of is the honesty: while validating on Microsoft's
 published 2.6M-VM Azure dataset I caught label leakage that had inflated

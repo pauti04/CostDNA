@@ -579,7 +579,27 @@ def calibrate(synthetic, days, seed, epochs, n_bins):
     render_calibration(cal, console=console)
     console.print(f"\n  [bold]Overall accuracy:[/] {cal.overall_acc:.1%}   "
                   f"[bold]Mean confidence:[/] {cal.overall_conf:.1%}   "
-                  f"[bold]ECE:[/] {cal.ece:.3f}")
+                  f"[bold]ECE (raw, all labeled):[/] {cal.ece:.3f}")
+
+    # Post-hoc temperature scaling (Guo et al., 2017). Fit T on a held-out
+    # calibration split, report ECE on a separate eval split — so the number
+    # isn't fit on the data it's measured on.
+    import torch as _torch
+
+    from costdna.calibrate import temperature_calibration
+    result.model.eval()
+    with _torch.no_grad():
+        logits = result.model(data.x, data.edge_index)[0].cpu().numpy()
+    labeled = data.labeled_mask.cpu().numpy()
+    temp = temperature_calibration(logits[labeled], y[labeled],
+                                   seed=seed, n_bins=n_bins)
+    arrow = "↓" if temp.ece_after < temp.ece_before else "≈"
+    console.print(
+        f"\n  [bold]Temperature scaling[/] (T={temp.temperature:.2f}, "
+        f"fit on {temp.calib_n} held-out, ECE on {temp.eval_n} eval):\n"
+        f"    ECE {temp.ece_before:.3f} {arrow} {temp.ece_after:.3f} "
+        f"after scaling"
+    )
 
 
 @main.command()
