@@ -92,7 +92,7 @@ Spec:
    - "Across all 33,205 deployments in the dataset, every single deployment belonged to exactly one subscription. The `deployment_id` graph edge — which I was using as a structural signal — was a perfect lookup of the answer. LabelProp's 97% was a graph-database join, not learning."
 
 4. **The fix and the honest result** (2 paragraphs)
-   - "Remove the leaking edges. Re-run. GraphSAGE on 100 classes: 6.9% — still 12× random, still beats every feature-only baseline including node2vec, but a long way from 97%."
+   - "Remove the leaking edges. Re-run. GraphSAGE on 100 classes: 6.9% — still ~7× random, still beats every feature-only baseline including node2vec, but a long way from 97%."
    - "Ran the same audit on Microsoft Philly's 117K-DL-job trace. Found a partial leak: 85% of users belong to exactly one virtual cluster. `user_id → vc` was near-deterministic. With user edges removed: 15% (still 2× random)."
 
 5. **The methodological claim** (1 paragraph)

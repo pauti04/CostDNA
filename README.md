@@ -92,7 +92,7 @@ Before claiming any "inferred tags" accuracy number to a customer, the model has
 
 ### The fix
 
-Remove the leaking edges. Re-run. GraphSAGE on 100 classes: **6.9%** — still 12× random, still beats every feature-only baseline including node2vec, but a long way from 97%.
+Remove the leaking edges. Re-run. GraphSAGE on 100 classes: **6.9%** — still ~7× random, still beats every feature-only baseline including node2vec, but a long way from 97%.
 
 Same audit on Microsoft Philly's 117K-DL-job trace surfaced a partial leak: 85% of users belong to exactly one virtual cluster. `user_id → vc` was near-deterministic. With user edges removed: 15% (still 2× random).
 

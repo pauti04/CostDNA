@@ -38,7 +38,7 @@ repo gets sorted into one of three buckets relative to that identity.
 |---|---|
 | "Ask your AWS bill questions. In English." landing hero | Replaced with audit hero |
 | "OPEN SOURCE · LLM AGENT OVER GRAPHSAGE" eyebrow | Replaced with "METHODOLOGY AUDIT" |
-| Big-number callouts (2.6M, 13/15, +53%, 3 clouds) on hero | Replaced with audit numbers (97%→6.9%, 12×, 33205, 2 datasets) |
+| Big-number callouts (2.6M, 13/15, +53%, 3 clouds) on hero | Replaced with audit numbers (97%→6.9%, ~7×, 33205, 2 datasets) |
 | Tool comparison table ("CostDNA vs CloudHealth/Kubecost/etc") | Positioning fluff, not a real comparison; removed pending real benchmark |
 | "Most engineers stop when they see a high accuracy number and ship it" | Smug; remove |
 | Marketing language ("ready", "forkable", "ship") | Replaced with neutral research-tone copy |

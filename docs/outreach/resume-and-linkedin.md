@@ -36,7 +36,7 @@ LinkedIn → your profile → "Add profile section" → "Recommended" → "Add f
 
 > Open-source behavioral graph neural network for cloud-resource attribution. Live demo at cost-dna.vercel.app.
 >
-> The technical contribution isn't the model — it's a methodology audit. While evaluating on Microsoft's published 2.6M-VM Azure trace, I caught a 100%-deterministic label-leakage pattern: across all 33,205 deployments in the dataset, `deployment_id` mapped 1:1 to `subscription_id`, so any graph method using that edge was doing a database join rather than learning. First-cut accuracy: 97%. With the leak removed, honest GraphSAGE accuracy on 100-class attribution: 6.9% — still 12× random, still beats every non-graph baseline including node2vec, but a long way from 97%.
+> The technical contribution isn't the model — it's a methodology audit. While evaluating on Microsoft's published 2.6M-VM Azure trace, I caught a 100%-deterministic label-leakage pattern: across all 33,205 deployments in the dataset, `deployment_id` mapped 1:1 to `subscription_id`, so any graph method using that edge was doing a database join rather than learning. First-cut accuracy: 97%. With the leak removed, honest GraphSAGE accuracy on 100-class attribution: 6.9% — still ~7× random, still beats every non-graph baseline including node2vec, but a long way from 97%.
 >
 > Confirmed the same pattern on Microsoft Philly's 117K-DL-job trace (`user_id → vc` is 85% deterministic). Two unrelated published datasets, same finding. The project argues that prior published work in cloud-resource attribution has likely been measuring leakage rather than learning, and proposes a two-line `pandas` audit as a minimum methodology standard before reporting accuracy.
 >
@@ -80,7 +80,7 @@ Pin this to your profile via the Featured section. Treat it like a one-paragraph
 >
 >   `(df.groupby("deployment_id")["subscription_id"].nunique() == 1).mean()`
 >
-> → 1.0. Across all 33,205 deployments, my graph edge was a perfect lookup of the prediction target. The 97% was a database join, not learning. Honest behavioral accuracy with the leak removed: 6.9% — still 12× random but a long way from the headline.
+> → 1.0. Across all 33,205 deployments, my graph edge was a perfect lookup of the prediction target. The 97% was a database join, not learning. Honest behavioral accuracy with the leak removed: 6.9% — still ~7× random but a long way from the headline.
 >
 > Same audit on a second Microsoft dataset (Philly 117K jobs) — same pattern. I argue prior published cloud-attribution work has likely been measuring leakage.
 >

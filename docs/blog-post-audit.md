@@ -15,7 +15,7 @@ attribution on Microsoft's published Azure trace and hit 97% accuracy on a
 Across all 33,205 deployments in the dataset, every single one belonged to
 exactly one subscription. The graph edge I was using was a perfect lookup of
 the prediction target. With the leak removed, honest accuracy on 100 classes
-was **6.9%** — still 12× random, still beats every non-graph baseline, but a
+was **6.9%** — still ~7× random, still beats every non-graph baseline, but a
 long way from 97%.
 
 I think this pattern generalizes. Prior published work in cloud-resource
@@ -95,7 +95,7 @@ LabelProp's "97%" was a graph-database join, not learning.
 
 Remove the leaking edges from the graph. Re-run.
 
-GraphSAGE on 100 classes: **6.9%** — still 12× random (random = 1%), still
+GraphSAGE on 100 classes: **6.9%** — still ~7× random (random = 1%), still
 beats every feature-only baseline including node2vec (which was tied with
 plain logistic regression at ~3% on this regime), but a long way from 97%.
 

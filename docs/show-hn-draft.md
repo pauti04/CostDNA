@@ -125,7 +125,7 @@ two-line audit:
 Across all 33,205 deployments in the dataset, every single one belonged
 to exactly one subscription. The graph edge I was using was a perfect
 lookup of the prediction target. With the leak removed, honest GraphSAGE
-accuracy on 100 classes was **6.9%** — still 12× random, still beats
+accuracy on 100 classes was **6.9%** — still ~7× random, still beats
 every non-graph baseline including node2vec, but a long way from 97%.
 
 I ran the same audit on Microsoft Philly's 117K-DL-job trace. Found
@@ -189,7 +189,7 @@ as a graph edge. The audit pattern is general; the application is the
 contribution.
 
 **"6.9% on 100 classes is bad. Why ship it?"**
-6.9% is 12× random and beats every feature-only baseline including
+6.9% is ~7× random and beats every feature-only baseline including
 node2vec. The point isn't that 6.9% is good — it's that it's honest.
 The 97% wasn't. On a real AWS account with full CloudTrail (not Azure's
 summary-stats-only trace) the lift is materially larger; that's the

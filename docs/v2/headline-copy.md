@@ -25,7 +25,7 @@ Length: 158 chars (room to tighten further if needed).
 
 ## 3. 30-second pitch (memorize verbatim)
 
-> CostDNA is a graph neural network that attributes cloud resources to owning teams from behavioral signals — CloudTrail events, IAM access patterns, cost time-series shape — rather than tags. The interesting part isn't the model. While evaluating on Microsoft's published 2.6M-VM Azure trace I caught label leakage: across all 33,205 deployments in the dataset, deployment_id mapped 1:1 to subscription_id, so any graph method using that edge was effectively doing a database join, not learning. First-cut accuracy was 97%; with the leak removed, honest behavioral accuracy is 6.9% on 100-class attribution — still 12× random, still beats every non-graph baseline including node2vec, but a long way from 97%. The negative result is the contribution: I argue prior published work in cloud-resource ML has likely been measuring leaks rather than learning, and propose a two-line pandas audit as a minimum standard before reporting accuracy.
+> CostDNA is a graph neural network that attributes cloud resources to owning teams from behavioral signals — CloudTrail events, IAM access patterns, cost time-series shape — rather than tags. The interesting part isn't the model. While evaluating on Microsoft's published 2.6M-VM Azure trace I caught label leakage: across all 33,205 deployments in the dataset, deployment_id mapped 1:1 to subscription_id, so any graph method using that edge was effectively doing a database join, not learning. First-cut accuracy was 97%; with the leak removed, honest behavioral accuracy is 6.9% on 100-class attribution — still ~7× random, still beats every non-graph baseline including node2vec, but a long way from 97%. The negative result is the contribution: I argue prior published work in cloud-resource ML has likely been measuring leaks rather than learning, and propose a two-line pandas audit as a minimum standard before reporting accuracy.
 
 ---
 
@@ -56,7 +56,7 @@ Hero CTAs:
 
 Hero big-number callouts (replaces current 2.6M / 13-15 / +53% / 3):
 - **97% → 6.9%** — first-cut vs. honest, after audit
-- **12×** — lift over random on 100-class attribution
+- **~7×** — lift over random on 100-class attribution
 - **33,205** — deployments in Azure trace, 100% mapped 1:1 to subscriptions
 - **2** — published datasets where the same pattern appeared
 

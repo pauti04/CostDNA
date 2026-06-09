@@ -36,7 +36,7 @@ When I disabled the deployment_id edge, accuracy collapsed:
 | GraphSAGE (5 teams) | — | 35% | 20% |
 | GraphSAGE (100 teams) | — | **6.9%** | 1% |
 
-GraphSAGE still beats random and beats every feature-only baseline at 100 classes (12× lift), but the absolute ceiling on this dataset is far lower than the original number suggested.
+GraphSAGE still beats random and beats every feature-only baseline at 100 classes (~7× lift), but the absolute ceiling on this dataset is far lower than the original number suggested.
 
 ## I checked the second dataset. Same pattern.
 

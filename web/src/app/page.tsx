@@ -91,7 +91,7 @@ export default function Home() {
               <div className="rounded-xl border border-border shadow-soft bg-bg overflow-hidden">
                 <Image
                   src="/images/audit-hero.png"
-                  alt="The audit chart: 97% first-cut accuracy was a tautology; honest GraphSAGE accuracy after removing the leak is 6.9% on 100-class attribution, still 12× random."
+                  alt="The audit chart: 97% first-cut accuracy was a tautology; honest GraphSAGE accuracy after removing the leak is 6.9% on 100-class attribution, still ~7× random."
                   width={2400}
                   height={1350}
                   className="w-full h-auto"
@@ -372,7 +372,7 @@ export default function Home() {
                 <div className="p-6">
                   <div className="text-xs uppercase tracking-wider text-text-muted mb-2">Random baseline</div>
                   <div className="text-4xl font-bold text-text-muted">1%</div>
-                  <div className="text-xs text-text-muted mt-2">12× lift remains</div>
+                  <div className="text-xs text-text-muted mt-2">~7× lift remains</div>
                 </div>
               </div>
             </FadeIn>
@@ -415,7 +415,7 @@ export default function Home() {
             <FadeIn delay={0.15}>
               <p className="text-text-soft leading-relaxed mb-8">
                 Remove the leaking edges. Re-run. GraphSAGE on 100 classes:{" "}
-                <b className="text-text">6.9%</b> — still 12× random, still beats every
+                <b className="text-text">6.9%</b> — still ~7× random, still beats every
                 feature-only baseline including node2vec, but a long way from 97%.
                 Same audit on Microsoft&apos;s Philly DL trace surfaced another partial
                 leak: 85% of users belong to one virtual cluster.{" "}
@@ -455,7 +455,7 @@ export default function Home() {
                         n: "2.6M VMs",
                         first: "97%",
                         shortcut: "deployment_id ≡ sub (100% deterministic)",
-                        honest: "6.9% (12× rand)",
+                        honest: "6.9% (~7× rand)",
                       },
                       {
                         ds: "Microsoft Philly",

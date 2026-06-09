@@ -171,7 +171,7 @@ Remove the leaking edges. Re-run.
 
 GraphSAGE on 100 classes: 6.9%.
 
-Still 12× random. Still beats every non-graph baseline including node2vec.
+Still ~7× random. Still beats every non-graph baseline including node2vec.
 
 But a long way from the 97% headline. The honest negative is the project's
 strongest finding.

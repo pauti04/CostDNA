@@ -47,7 +47,7 @@ Hi {name},
 
 Kubecost does pod-level attribution beautifully. While building an open-source behavioral GNN for the non-k8s gap (Lambda / RDS / S3 / plain EC2), I ran into something I think is structurally relevant to any cloud-attribution work.
 
-Tested on Microsoft's published 2.6M-VM Azure trace. First-cut GraphSAGE accuracy: 97% across 100 classes. A two-line check exposed it: across all 33,205 deployments, `deployment_id` mapped 1:1 to `subscription_id`. The graph edge was a perfect lookup of the answer. With the leak removed, honest accuracy was **6.9%** (still 12× random but a long way from 97%). Same pattern on Microsoft Philly's 117K-job trace with `user_id → vc`.
+Tested on Microsoft's published 2.6M-VM Azure trace. First-cut GraphSAGE accuracy: 97% across 100 classes. A two-line check exposed it: across all 33,205 deployments, `deployment_id` mapped 1:1 to `subscription_id`. The graph edge was a perfect lookup of the answer. With the leak removed, honest accuracy was **6.9%** (still ~7× random but a long way from 97%). Same pattern on Microsoft Philly's 117K-job trace with `user_id → vc`.
 
 Argument: published cloud-attribution work has likely been measuring leakage rather than learning. Audit + reusable check: github.com/pauti04/CostDNA · cost-dna.vercel.app
 
@@ -85,7 +85,7 @@ Hi {name},
 
 nOps does multi-cloud cost intelligence, which means you've almost certainly hit the same kind of label-leakage issue I did when I tested an open-source behavioral GNN on Microsoft's published 2.6M-VM Azure trace.
 
-The short version: `deployment_id` (which I was using as a graph edge) maps 1:1 to `subscription_id` across all 33,205 deployments in the dataset. So my GNN's "97% accuracy" was a graph-database join, not learning. Honest GraphSAGE accuracy with the leak removed: **6.9%** on 100 classes — still 12× random and beats every non-graph baseline (including node2vec), but a long way from 97%.
+The short version: `deployment_id` (which I was using as a graph edge) maps 1:1 to `subscription_id` across all 33,205 deployments in the dataset. So my GNN's "97% accuracy" was a graph-database join, not learning. Honest GraphSAGE accuracy with the leak removed: **6.9%** on 100 classes — still ~7× random and beats every non-graph baseline (including node2vec), but a long way from 97%.
 
 Same audit on Microsoft Philly's 117K-job trace exposed an 85%-deterministic `user_id → vc` shortcut. Two datasets, same finding: structural metadata dominates real cloud attribution.
 
