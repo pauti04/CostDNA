@@ -258,6 +258,7 @@ The full breakdown is in [`docs/limitations.md`](docs/limitations.md). Highlight
 - **Accounts under ~100 resources are too sparse for graph methods.** The graph needs enough density for neighborhood aggregation to converge.
 - **CostDNA is not a production-deployed tool.** "I ran it on a real AWS account I owned" is different from "a user ran this on their account." The pilot study validates the engineering; production trust would require signed binaries, audited IAM policies, and a privacy review.
 - **The synthetic env is hand-constructed.** Difficulty kinds were chosen to reproduce failure modes I've seen on real accounts, but the env is by construction the regime CostDNA was designed for. Treat synthetic numbers as ablation, not as the headline.
+- **The graph adds little on clean data — by design, not by accident.** A robustness sweep ([`docs/robustness.md`](docs/robustness.md)) shows that removing *all* graph edges costs only ~7 points on the synthetic env: when resources are behaviorally distinct, a feature-only model gets most of the way. The graph earns its complexity specifically on the ambiguous cases (cross-team, decoy, shared-service). Stress-tested under label noise too: tolerates ~10–20% wrong seed labels, degrades past 30%.
 
 ---
 
