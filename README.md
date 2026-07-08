@@ -345,14 +345,24 @@ costdna learn --synthetic --compare-all         # active learning curves
 
 ### Live AWS scan
 
+First grant read-only access with a one-command deploy — CloudFormation or Terraform, least-privilege, safe by default ([`deploy/`](deploy/)):
+
 ```bash
-costdna doctor --aws-profile prod               # preflight: IAM perms + region availability
-costdna scan --aws-profile prod --save-dir runs/$(date +%F)
-costdna apply --predictions runs/$(date +%F)/predictions.csv          # dry-run
-costdna apply --predictions runs/$(date +%F)/predictions.csv --apply  # live write
+aws cloudformation deploy \
+  --template-file deploy/cloudformation/costdna-scan-role.yaml \
+  --stack-name costdna-scan-role --capabilities CAPABILITY_NAMED_IAM
 ```
 
-Full walkthrough: see [`DEPLOYMENT.md`](DEPLOYMENT.md).
+Then point a profile at the role and scan:
+
+```bash
+costdna doctor --aws-profile costdna            # preflight: IAM perms + region availability
+costdna scan --aws-profile costdna --save-dir runs/$(date +%F)
+costdna apply --predictions runs/$(date +%F)/predictions.csv          # dry-run
+costdna apply --predictions runs/$(date +%F)/predictions.csv --apply  # live write (opt-in role)
+```
+
+Full deploy options (Terraform, cross-account + ExternalId, opt-in write-back): [`deploy/README.md`](deploy/README.md). Runbook: [`DEPLOYMENT.md`](DEPLOYMENT.md). Design in Well-Architected terms: [`docs/well-architected.md`](docs/well-architected.md).
 
 ### Build the labeled environment yourself
 

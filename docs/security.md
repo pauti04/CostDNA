@@ -87,7 +87,7 @@ For `costdna scan` (the primary use case):
 }
 ```
 
-This is the entire permission set. No `*:*`, no `iam:Pass*`, no
+This is the entire permission set. Deploy it in one command (CloudFormation or Terraform, read-only by default) — see [`deploy/`](../deploy/). No `*:*`, no `iam:Pass*`, no
 write actions. If you have a finer-grained policy in your org
 (e.g. resource ARNs scoped to specific accounts), restrict
 `Resource: *` accordingly — CostDNA only needs to read what's in
