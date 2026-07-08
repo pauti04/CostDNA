@@ -110,7 +110,7 @@ Prior published work in cloud-resource attribution typically reports accuracy in
 4. Remove or down-weight any leaking edges
 5. Re-run; report both the inflated and honest numbers; lead with the honest one
 
-**The check is packaged as a standalone tool** — [`leakcheck`](packages/leakcheck/) (`pip install leakcheck` once published): `leakcheck.check(df, target="label")` audits every column, or `leakcheck data.csv --target label --fail-on-leak` as a CI gate. Works on any tabular/graph dataset, not just cloud-cost data — the Azure and Philly leaks are its motivating case studies.
+**The check is packaged as a standalone tool** — [`leakaudit`](packages/leakaudit/) (`pip install leakaudit` once published): `leakaudit.check(df, target="label")` audits every column, or `leakaudit data.csv --target label --fail-on-leak` as a CI gate. Works on any tabular/graph dataset, not just cloud-cost data — the Azure and Philly leaks are its motivating case studies.
 
 ---
 

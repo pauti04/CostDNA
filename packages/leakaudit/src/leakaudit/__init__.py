@@ -1,4 +1,4 @@
-"""leakcheck — catch label leakage before you report accuracy.
+"""leakaudit — catch label leakage before you report accuracy.
 
 Cloud, tabular, and graph datasets routinely contain columns that
 deterministically (or near-deterministically) encode the prediction target.
@@ -7,14 +7,14 @@ that looks like learning but is really a database join.
 
 The public API:
 
-    >>> import leakcheck
-    >>> report = leakcheck.check(df, target="label")
+    >>> import leakaudit
+    >>> report = leakaudit.check(df, target="label")
     >>> report.leaks              # columns that encode the target
     >>> print(report)             # human-readable summary
 
 Or the low-level function:
 
-    >>> leakcheck.find_deterministic_edges(df, "label", ["col_a", "col_b"])
+    >>> leakaudit.find_deterministic_edges(df, "label", ["col_a", "col_b"])
     {'col_a': 1.0}
 
 Motivated by a real finding: on Microsoft's published 2.6M-VM Azure trace,
@@ -22,7 +22,7 @@ Motivated by a real finding: on Microsoft's published 2.6M-VM Azure trace,
 inflating a benchmark to 97% that was honestly 6.9%. See the README.
 """
 
-from leakcheck.core import (
+from leakaudit.core import (
     ColumnLeak,
     LeakReport,
     check,

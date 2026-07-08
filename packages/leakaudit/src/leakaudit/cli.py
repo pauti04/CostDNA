@@ -1,4 +1,4 @@
-"""Command-line interface: `leakcheck data.csv --target label`."""
+"""Command-line interface: `leakaudit data.csv --target label`."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ import sys
 
 import pandas as pd
 
-from leakcheck.core import check
+from leakaudit.core import check
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="leakcheck",
+        prog="leakaudit",
         description="Find columns that deterministically encode your target "
                     "(label leakage) before you report accuracy.",
     )

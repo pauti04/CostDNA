@@ -1,12 +1,12 @@
-"""Tests for leakcheck — mirrors the two real Microsoft case studies in miniature."""
+"""Tests for leakaudit — mirrors the two real Microsoft case studies in miniature."""
 
 from __future__ import annotations
 
 import pandas as pd
 import pytest
 
-import leakcheck
-from leakcheck import check, determinism_score, find_deterministic_edges
+import leakaudit
+from leakaudit import check, determinism_score, find_deterministic_edges
 
 
 def test_azure_total_leak():
@@ -84,6 +84,6 @@ def test_target_missing_raises():
 
 
 def test_public_api_surface():
-    assert hasattr(leakcheck, "check")
-    assert hasattr(leakcheck, "find_deterministic_edges")
-    assert leakcheck.__version__
+    assert hasattr(leakaudit, "check")
+    assert hasattr(leakaudit, "find_deterministic_edges")
+    assert leakaudit.__version__

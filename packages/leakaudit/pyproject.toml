@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "leakcheck"
+name = "leakaudit"
 version = "0.1.0"
 description = "Catch label leakage before you report accuracy — find columns that deterministically encode your target."
 readme = "README.md"
@@ -27,10 +27,10 @@ dependencies = [
 dev = ["pytest>=7.0"]
 
 [project.scripts]
-leakcheck = "leakcheck.cli:main"
+leakaudit = "leakaudit.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/pauti04/leakcheck"
+Homepage = "https://github.com/pauti04/leakaudit"
 "Case study" = "https://github.com/pauti04/CostDNA#the-audit"
 
 [tool.setuptools.packages.find]

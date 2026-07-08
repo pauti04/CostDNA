@@ -122,8 +122,8 @@ class LeakReport:
 
     def __str__(self) -> str:
         if not self.columns:
-            return f"leakcheck: no columns audited against target {self.target!r}."
-        lines = [f"leakcheck report — target: {self.target!r}  (threshold {self.threshold:.2f})"]
+            return f"leakaudit: no columns audited against target {self.target!r}."
+        lines = [f"leakaudit report — target: {self.target!r}  (threshold {self.threshold:.2f})"]
         for c in self.columns:
             flag = "  ⚠ LEAK" if c.determinism >= self.threshold else ""
             hc = "  (high-cardinality — may be coincidental)" if c.high_cardinality and c.determinism >= self.threshold else ""
@@ -150,7 +150,7 @@ def check(
 
     This is the batteries-included entry point:
 
-        >>> report = leakcheck.check(df, target="label")
+        >>> report = leakaudit.check(df, target="label")
         >>> if not report.clean:
         ...     raise ValueError(f"leaking columns: {report.leaks}")
         >>> print(report)

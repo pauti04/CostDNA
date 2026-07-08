@@ -1,4 +1,4 @@
-# leakcheck
+# leakaudit
 
 **Catch label leakage before you report accuracy.** One function that finds
 the columns in your dataset that deterministically encode the target — the
@@ -6,20 +6,20 @@ kind that make a model look like it learned something when it really just did
 a database join.
 
 ```bash
-pip install leakcheck
+pip install leakaudit
 ```
 
 ```python
-import leakcheck
+import leakaudit
 
-report = leakcheck.check(df, target="label")
+report = leakaudit.check(df, target="label")
 if not report.clean:
     raise ValueError(f"leaking columns: {report.leaks}")
 print(report)
 ```
 
 ```
-leakcheck report — target: 'subscription_id'  (threshold 0.85)
+leakaudit report — target: 'subscription_id'  (threshold 0.85)
   deployment_id            100.0%  (33205 distinct)  ⚠ LEAK
   cpu_bucket                 0.0%  (4 distinct)
   → LEAKING: deployment_id — drop these before reporting accuracy.
@@ -44,7 +44,7 @@ found the same shape: `user_id` was ~85% deterministic of the virtual cluster.
 Two unrelated public datasets, same leak. The full write-up and the cloud-cost
 project it came from: **[CostDNA](https://github.com/pauti04/CostDNA#the-audit)**.
 
-`leakcheck` is that check, packaged so you can run it on anything.
+`leakaudit` is that check, packaged so you can run it on anything.
 
 ## The check, precisely
 
@@ -63,30 +63,30 @@ column's distinct values that map to exactly one target value:
 ## API
 
 ```python
-import leakcheck
+import leakaudit
 
 # Batteries-included: audit every column, get a printable report
-report = leakcheck.check(df, target="label")
+report = leakaudit.check(df, target="label")
 report.clean          # bool
 report.leaks          # {"deployment_id": 1.0, ...}
 
 # Audit a specific subset
-report = leakcheck.check(df, target="label", candidates=["a", "b", "c"])
+report = leakaudit.check(df, target="label", candidates=["a", "b", "c"])
 
 # Low-level: the original two-line check as a function
-leakcheck.find_deterministic_edges(df, "label", ["a", "b"], threshold=0.85)
+leakaudit.find_deterministic_edges(df, "label", ["a", "b"], threshold=0.85)
 # → {"a": 1.0}
 
 # Single score
-leakcheck.determinism_score(df, "a", "label")   # → 1.0
+leakaudit.determinism_score(df, "a", "label")   # → 1.0
 ```
 
 ### CLI
 
 ```bash
-leakcheck data.csv --target label                 # audit all columns
-leakcheck data.csv --target label -c col_a col_b  # audit a subset
-leakcheck data.csv --target label --fail-on-leak  # exit 1 if any leak (CI gate)
+leakaudit data.csv --target label                 # audit all columns
+leakaudit data.csv --target label -c col_a col_b  # audit a subset
+leakaudit data.csv --target label --fail-on-leak  # exit 1 if any leak (CI gate)
 ```
 
 Drop `--fail-on-leak` into CI to block a benchmark PR that reintroduces a leak.
@@ -101,7 +101,7 @@ Drop `--fail-on-leak` into CI to block a benchmark PR that reintroduces a leak.
 ## Notes
 
 - **High-cardinality columns** (nearly unique per row) will read as 1:1 by
-  construction. `leakcheck` flags them separately (`⚠ high-cardinality — may
+  construction. `leakaudit` flags them separately (`⚠ high-cardinality — may
   be coincidental`) so you don't mistake a near-unique ID for a structural
   leak on a small sample.
 - Only the columns you check are checked. An empty result means the

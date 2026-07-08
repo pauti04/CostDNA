@@ -40,6 +40,6 @@ checkpoints/
 reproduce/
 
 # leakcheck local build
-packages/leakcheck/src/*.egg-info/
-packages/leakcheck/build/
-packages/leakcheck/dist/
+packages/leakaudit/src/*.egg-info/
+packages/leakaudit/build/
+packages/leakaudit/dist/
