@@ -3,6 +3,12 @@
 import { useCallback, useState } from "react";
 
 import { analyzeCsv, type Analysis } from "@/lib/cur-analyze";
+import {
+  buildRequireTagScp,
+  buildTagPolicy,
+  downloadJson,
+  teamsFromAnalysis,
+} from "@/lib/policy-gen";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;   // 50 MB — covers most monthly CURs
 
@@ -352,6 +358,8 @@ function Results({
         </div>
       )}
 
+      <PolicyCard analysis={analysis} />
+
       <div className="pt-6 border-t border-border">
         <p className="text-sm text-text-soft">
           Want to keep going? The full Python CLI does behavioural-fingerprint
@@ -361,6 +369,76 @@ function Results({
           </code>
         </p>
       </div>
+    </div>
+  );
+}
+
+
+/** Close the loop in-browser: from the team breakdown, generate the AWS
+ *  Organizations enforcement artifacts (tag policy + SCP) and download them.
+ *  Same output shapes as `costdna policy`; the "unattributed" bucket never
+ *  becomes policy. */
+function PolicyCard({ analysis }: { analysis: Analysis }) {
+  let teams: string[] = [];
+  let unavailable: string | null = null;
+  try {
+    teams = teamsFromAnalysis(analysis);
+  } catch (e: unknown) {
+    unavailable = e instanceof Error ? e.message : "no attributed teams";
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-bg-section p-6">
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="text-xl font-semibold text-text">
+          Close the loop: prevent future un-tagging
+        </h2>
+        <span className="text-[11px] uppercase tracking-wider font-mono text-text-muted">
+          generated in your browser
+        </span>
+      </div>
+      {unavailable ? (
+        <p className="text-sm text-text-soft leading-relaxed">
+          No attributed teams in this analysis, so there&apos;s nothing to build a
+          policy from — the generator refuses to emit an empty-but-plausible
+          policy. Attribute some resources first (tags or recognizable names).
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-text-soft leading-relaxed mb-4">
+            From the teams found above ({teams.join(", ")}), generate the AWS
+            Organizations artifacts that stop the untagged pile from growing:
+            a <b className="text-text">tag policy</b> pinning the allowed{" "}
+            <code className="font-mono text-xs bg-bg-soft px-1 py-0.5 rounded">team</code>{" "}
+            values, and an <b className="text-text">SCP</b> denying resource
+            creation without the tag (EC2/RDS/Lambda — S3 can&apos;t be gated at
+            create-time). Same output as{" "}
+            <code className="font-mono text-xs bg-bg-soft px-1 py-0.5 rounded">costdna policy</code>.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => downloadJson(buildTagPolicy(teams), "tag-policy.json")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-bg-deep text-text-on-deep font-medium text-sm hover:brightness-110 transition"
+            >
+              ↓ tag-policy.json
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadJson(buildRequireTagScp(), "scp-require-tag.json")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-bg text-text font-medium text-sm hover:border-text transition"
+            >
+              ↓ scp-require-tag.json
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-text-muted leading-relaxed">
+            Attach via Organizations → Policies. Heads-up: this in-browser path
+            derives teams from tags + name patterns; the CLI version
+            additionally gates on model confidence before anything becomes
+            policy.
+          </p>
+        </>
+      )}
     </div>
   );
 }
