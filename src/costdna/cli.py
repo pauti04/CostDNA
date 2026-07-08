@@ -949,6 +949,79 @@ def self_eval_cmd(baseline_dir: Path, current_dir: Path,
 
 
 @main.command()
+@click.option("--predictions", "predictions_path", required=True,
+              type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="predictions.csv from a scan (resource_id, team_pred, confidence).")
+@click.option("--output-dir", "output_dir", default="policies",
+              type=click.Path(file_okay=False, path_type=Path),
+              show_default=True)
+@click.option("--tag-key", default="team", show_default=True)
+@click.option("--min-confidence", default=0.7, show_default=True,
+              help="Teams are derived only from predictions at/above this bar.")
+def policy(predictions_path: Path, output_dir: Path,
+           tag_key: str, min_confidence: float) -> None:
+    """Generate AWS Organizations governance from a scan.
+
+    Closes the loop from "infer tags" to "prevent future un-tagging":
+
+    \b
+      tag-policy.json           — Organizations tag policy pinning the allowed
+                                  team values (high-confidence teams only)
+      scp-require-tag.json      — SCP denying resource creation without the
+                                  tag, for services honoring aws:RequestTag
+                                  (EC2/RDS/Lambda; S3 can't be gated this way)
+      out-of-policy preview     — the low-confidence resources a human must
+                                  confirm before they'd comply
+
+    Fails loudly if no prediction clears the confidence bar — low-confidence
+    guesses never silently become policy.
+    """
+    import json
+
+    import pandas as pd
+
+    from costdna.policy import generate_policies
+
+    preds = pd.read_csv(predictions_path)
+    try:
+        bundle = generate_policies(preds, tag_key=tag_key,
+                                   min_confidence=min_confidence)
+    except ValueError as e:
+        console.print(f"[red]✗[/] {e}")
+        sys.exit(1)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tag_path = output_dir / "tag-policy.json"
+    scp_path = output_dir / "scp-require-tag.json"
+    tag_path.write_text(json.dumps(bundle.tag_policy, indent=2) + "\n")
+    scp_path.write_text(json.dumps(bundle.scp, indent=2) + "\n")
+
+    console.print(f"[bold cyan]→[/] Teams (high-confidence): "
+                  f"[bold]{', '.join(bundle.teams)}[/]")
+    if bundle.excluded_teams:
+        console.print(f"  [yellow]⚠ excluded (low-confidence only):[/] "
+                      f"{', '.join(bundle.excluded_teams)}")
+    console.print(f"  wrote {tag_path}")
+    console.print(f"  wrote {scp_path}")
+
+    if len(bundle.out_of_policy):
+        console.print(f"\n  [bold]{len(bundle.out_of_policy)} resources would be "
+                      f"out-of-policy[/] (below {min_confidence:.2f} confidence — "
+                      f"confirm via `costdna learn` before enforcement):")
+        for _, r in bundle.out_of_policy.head(10).iterrows():
+            console.print(f"    {r['resource_id']}  "
+                          f"({r['team_pred']}, conf={r['confidence']:.2f})")
+    else:
+        console.print("\n  [green]✓[/] every resource clears the confidence bar.")
+
+    console.print(
+        "\n  Attach: Organizations → Policies → Tag policies (tag-policy.json), "
+        "Service control policies (scp-require-tag.json). Both require the "
+        "feature enabled on the org."
+    )
+
+
+@main.command()
 @click.option("--port", default=8501, show_default=True,
               help="Port for the Streamlit web UI.")
 def serve(port: int) -> None:
