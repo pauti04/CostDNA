@@ -532,20 +532,20 @@ export default function Home() {
               },
               {
                 tier: "Managed scan",
-                price: "$0.05",
-                priceSub: "per resource scanned · waitlist",
-                desc: "Read-only IAM role; we run the scan in our infrastructure, deliver a PDF executive summary + tagged predictions.csv. No installation, no compute on your side. Currently invite-only.",
-                cta: "Join waitlist →",
-                ctaHref: "mailto:parth.auti@gmail.com?subject=CostDNA managed-scan waitlist",
+                price: "~$0.05",
+                priceSub: "per resource · not built yet",
+                desc: "A hosted option — you grant a read-only role, a scan runs off-box and returns a report. This does not exist today; it's the shape a managed tier would take if there's demand. Email me if you'd want it.",
+                cta: "Register interest →",
+                ctaHref: "mailto:parth.auti@gmail.com?subject=CostDNA managed-scan interest",
                 primary: true,
               },
               {
                 tier: "Enterprise",
-                price: "Talk to us",
-                priceSub: "annual contract",
-                desc: "Continuous attribution + drift alerting in your VPC. Custom IAM scope, SLA on accuracy bands, integration with existing FinOps stack (Vantage, CloudHealth, Datadog CCM, Slack). SOC 2 attestation in progress.",
+                price: "Not offered yet",
+                priceSub: "future possibility",
+                desc: "Continuous attribution + drift alerting in your VPC, custom IAM scope, FinOps-stack integration. Also aspirational — a managed/enterprise offering would need SOC 2 and a real team behind it; neither exists today. This is a portfolio project, not a company.",
                 cta: "Get in touch →",
-                ctaHref: "mailto:parth.auti@gmail.com?subject=CostDNA enterprise",
+                ctaHref: "mailto:parth.auti@gmail.com?subject=CostDNA",
                 primary: false,
               },
             ].map((p) => (
@@ -636,10 +636,12 @@ export default function Home() {
           </div>
           <FadeIn delay={0.10}>
             <p className="mt-8 text-sm text-text-muted leading-relaxed max-w-3xl">
-              SOC 2 Type I attestation: <b className="text-text">in progress</b>{" "}
-              (managed-scan tier). SOC 2 Type II: planned post-pilot.
-              For self-hosted, the relevant attestation is your own — CostDNA
-              runs in your security boundary.
+              <b className="text-text">On compliance, honestly:</b> there is no SOC 2
+              audit in progress — CostDNA is a self-hosted, open-source project, not
+              a managed service. For the self-hosted path the relevant attestation is
+              your own, since CostDNA runs entirely inside your security boundary. A
+              managed tier (which would need SOC 2) is a hypothetical, not something
+              being built today.
             </p>
           </FadeIn>
         </div>

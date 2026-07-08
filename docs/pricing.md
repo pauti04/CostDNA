@@ -1,10 +1,20 @@
 # Pricing
 
+> **Read this first.** CostDNA is an open-source portfolio project, not a
+> company. **Only the self-hosted tier is real** ($0, MIT, available now). The
+> "Managed scan" and "Enterprise" tiers below are *illustrative* — they
+> describe the shape a commercial offering *could* take, with the pricing
+> rationale worked out, but **none of it exists today**: no managed service,
+> no waitlist you'll be onboarded from, no SOC 2 audit in progress, no
+> customers. The "we"/"customer" language below is hypothetical framing for
+> what a business version would look like. If a hosted option would be useful
+> to you, email me — that demand signal is the only thing that would justify
+> building one.
+
 The short version is on the landing page at
 [cost-dna.vercel.app/#pricing](https://cost-dna.vercel.app/#pricing).
-This document is the rationale — why each tier is priced where it
-is, what's included, and the value math that makes those numbers
-defensible.
+This document is the rationale — why each hypothetical tier is priced
+where it is, and the value math behind it.
 
 ---
 
@@ -39,7 +49,7 @@ many resources you've scanned and no incentive to find out.
 | Monthly scan delivered as PDF executive summary + predictions.csv | Sent to a designated email |
 | Drift alerting via Slack/Discord webhook | Optional |
 | Email support | 5-business-day response target |
-| SOC 2 Type I attestation | In progress — required before GA |
+| SOC 2 Type I attestation | Not started — would be required before any managed GA |
 
 **Why $0.05 per resource scanned:** the marginal cost of running a
 scan on an account with N resources is roughly linear in N (CloudTrail
@@ -48,10 +58,10 @@ calls, feature extraction, GNN training). At $0.05/resource a typical
 manual attribution workshop would cost (5 hours of a $30/hr FinOps
 analyst).
 
-**Why a waitlist:** managed scan requires the SOC 2 Type I attestation
+**Status, honestly:** the managed scan does not exist yet. It would require a SOC 2 attestation
 to be in flight before we accept paying customers. We are not yet
-that. The waitlist is real: when SOC 2 lands, you'll get an
-invitation to onboard at the price quoted here.
+that, and neither the attestation nor the service exists today. If you'd
+want a hosted option, email me — that signal is what would justify building it.
 
 ---
 
@@ -65,7 +75,7 @@ invitation to onboard at the price quoted here.
 | Integration with existing FinOps stack | Tag-import for Vantage, CloudHealth, Datadog CCM |
 | Drift alerts piped to PagerDuty, Slack, or your incident channel | |
 | Quarterly methodology review | Verify the audit module catches any new published-dataset leaks |
-| SOC 2 Type II attestation | Post-pilot |
+| SOC 2 Type II attestation | Hypothetical — only if a managed tier is ever built |
 | Named technical point-of-contact | Direct Slack channel |
 
 **Why no public price:** enterprise pricing is a function of (a) how
@@ -135,7 +145,7 @@ dashboard work.
 |---|---|
 | Try CostDNA on your CUR in 90 seconds | [cost-dna.vercel.app/your-account](https://cost-dna.vercel.app/your-account) |
 | Install the CLI on a non-prod account | [`docs/quickstart.md`](quickstart.md) (or `pip install costdna` + `costdna doctor`) |
-| Join the managed-scan waitlist | Email parth.auti@gmail.com, subject `managed-scan waitlist` |
-| Discuss enterprise terms | Email parth.auti@gmail.com, subject `CostDNA enterprise` |
+| Register interest in a hosted option (doesn't exist yet) | Email parth.auti@gmail.com, subject `managed-scan interest` |
+| Talk about the project | Email parth.auti@gmail.com, subject `CostDNA` |
 | Find a bug | [GitHub issues](https://github.com/pauti04/CostDNA/issues) |
 | Find a vulnerability | See [`SECURITY.md`](../SECURITY.md) |

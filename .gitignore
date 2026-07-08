@@ -38,3 +38,8 @@ checkpoints/
 *.swp
 .DS_Store
 reproduce/
+
+# leakcheck local build
+packages/leakcheck/src/*.egg-info/
+packages/leakcheck/build/
+packages/leakcheck/dist/

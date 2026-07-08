@@ -193,7 +193,7 @@ name. Two mitigations:
 - **Self-hosted CostDNA:** the relevant attestation is the
   customer's own — CostDNA runs entirely inside their security
   boundary, inheriting whatever controls they've already attested.
-- **Managed scan (invite-only):** SOC 2 Type I attestation is in
+- **Managed scan:** does not exist today. If it were built, SOC 2 Type I would be a prerequisite; it is
   progress. Target: pre-GA of the managed tier.
 - **Type II:** planned post-pilot, contingent on at least one paying
   enterprise customer to justify the audit cost.
