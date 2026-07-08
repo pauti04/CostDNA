@@ -137,3 +137,25 @@ def test_missing_candidate_raises():
     df = pd.DataFrame({"target": ["A", "B", "C"]})
     with pytest.raises(KeyError, match="candidate column"):
         find_deterministic_edges(df, "target", ["nonexistent"])
+
+
+def test_synthetic_env_is_known_to_fail_its_own_audit():
+    """Regression pin for an honest finding: the synthetic env's vpc_cidr and
+    iam_role are 1.0-deterministic of team BY CONSTRUCTION (each team owns a
+    VPC; role names follow team pools) — the same numeric pattern the project
+    called a leak on Azure. The README discloses this; this test makes sure
+    the disclosure can never silently drift back to "the checks don't
+    trigger" (a claim an earlier README version made, wrongly).
+    """
+    from costdna import TEAMS
+    from costdna.collectors import generate_synthetic_signals
+
+    _, meta, _, _ = generate_synthetic_signals(
+        n_per_type_per_team=4, days=3, seed=7)
+    labeled = meta[meta["team"].isin(TEAMS)]
+    leaks = find_deterministic_edges(
+        labeled, target_col="team",
+        candidate_edge_cols=["vpc_cidr", "iam_role"],
+    )
+    assert leaks.get("vpc_cidr") == pytest.approx(1.0)
+    assert leaks.get("iam_role") == pytest.approx(1.0)

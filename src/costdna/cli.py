@@ -244,6 +244,26 @@ def scan(cloud, aws_profile, region, days, synthetic, seed, epochs, save_dir,
         n_labeled = metadata["team"].notna().sum()
         console.print(f"  merged {n_labeled} labels from [bold]{labels_path}[/]")
 
+    # Dogfood the audit: before training, run the project's own leakage check
+    # on the metadata columns that feed graph edges. If a column is
+    # deterministic of the label, say so loudly — inferred accuracy that rides
+    # on a deterministic edge is a lookup, not learning (the Azure lesson).
+    if "team" in metadata.columns and metadata["team"].notna().any():
+        from costdna.audit import find_deterministic_edges
+        _labeled = metadata[metadata["team"].notna()]
+        _candidates = [c for c in ("vpc_cidr", "iam_role", "resource_type")
+                       if c in metadata.columns]
+        if _candidates and len(_labeled) > 1:
+            _leaks = find_deterministic_edges(_labeled, "team", _candidates)
+            if _leaks:
+                pretty = ", ".join(f"{k} ({v:.0%})" for k, v in _leaks.items())
+                console.print(
+                    f"  [yellow]⚠ leakage audit:[/] {pretty} deterministically "
+                    f"encode the label. Graph edges built from these columns act "
+                    f"as label lookups — treat accuracy accordingly "
+                    f"(see docs/limitations.md)."
+                )
+
     # Derive the active team list. For AWS this is just TEAMS; for Azure it's
     # the actual subscription IDs that appear in the data.
     active_teams = _effective_teams(metadata)

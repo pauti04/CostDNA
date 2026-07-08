@@ -126,7 +126,7 @@ includes:
 | SLA on accuracy | None | Confidence intervals are honest but no SLA |
 | User-facing error handling | Partial | Many errors are stack traces, not actionable messages |
 | Documentation for non-engineers | Partial | README assumes ML / Python literacy |
-| Support for tag-policy enforcement | None | The tag-policy generator is on the roadmap, not built |
+| Support for tag-policy enforcement | `costdna policy` generates the Org tag policy + SCP | Generated, not yet applied to a live Organization |
 | Customer-deployable installer | Docker image only | No one-click install for non-Docker shops |
 | Authentication for the optional web UI | None | Streamlit serves on localhost; no auth |
 | Multi-tenant deployment | None | Single-tenant by design |
@@ -208,3 +208,29 @@ def find_deterministic_edges(
 Run this before training any model on a cloud-attribution dataset. It costs
 one function call and catches the failure mode this project documents on the
 Azure trace.
+
+## 7. The synthetic env fails its own audit — by construction
+
+Running `find_deterministic_edges` on the synthetic metadata flags
+`vpc_cidr` and `iam_role` at 1.000 determinism of team — the identical
+numeric pattern we classified as a leak on the Azure trace. It is
+deliberate (the env models real org structure: teams own VPCs, role names
+follow team conventions), and `build_graph` uses both columns as edge
+sources.
+
+What the audit alone cannot decide is whether determinism is a *benchmark
+artifact* (Azure: exclude it) or *modeled world-structure* (here: it's the
+thing being simulated). By our own numeric standard, both trigger — so we
+disclose rather than special-plead. Two mitigations keep the synthetic
+numbers meaningful:
+
+1. **The headline doesn't depend on the deterministic edges.** The
+   edge-dropout sweep (docs/robustness.md) shows 89.4% with the graph
+   entirely removed.
+2. **Synthetic results are labeled ablation, not headline** — this is one
+   of the reasons why.
+
+`costdna scan` now runs this audit on its own inputs and prints a warning
+when a metadata column deterministically encodes the label, so the same
+blind spot can't recur silently. Pinned by
+`test_synthetic_env_is_known_to_fail_its_own_audit`.
