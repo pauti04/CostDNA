@@ -310,7 +310,7 @@ The model + features + agent are cloud-agnostic; only the collector layer is pro
 | Cloud | Live scan | Methodology evaluation | Install |
 |---|---|---|---|
 | AWS   | ✅ engineering-validated (13/15 = 87% on Terraform-provisioned account) | — | `pip install costdna` |
-| Azure | ⚠ implemented per SDK patterns, untested against live subscription | ✅ via 2.6M-VM Public Dataset audit | `pip install 'costdna[azure]'` |
+| Azure | ⚠ implemented per SDK patterns, untested against live subscription — [one-command role deploy ready](deploy/azure/) | ✅ via 2.6M-VM Public Dataset audit | `pip install 'costdna[azure]'` |
 | GCP   | ⚠ implemented per SDK patterns, untested against live project | — | `pip install 'costdna[gcp]'` |
 
 Honest scope: AWS is the production-tested live path; Azure's methodological eval is the headline; GCP collectors await live validation. Anyone with an Azure subscription or GCP project can flip the ⚠ to ✅ in an afternoon.

@@ -12,6 +12,12 @@ grant, scoped so it can only ever touch resources CostDNA has already marked
 
 ---
 
+## Azure
+
+The Azure equivalent (least-privilege custom RBAC role, Bicep + Terraform)
+lives in [`azure/`](azure/). Same posture: read-only by default, opt-in tag
+write-back.
+
 ## Option A — CloudFormation
 
 **One command (recommended — always works):**
