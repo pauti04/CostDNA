@@ -344,3 +344,8 @@ Here's what's in it 🧵
 If short on time, skip `audit-checklist.png` and post Tweet 6 image-less. The
 code block in the tweet body is the artifact; an image makes it
 share-friendlier but the thread still works without one.
+
+> ⚠ **Do NOT post `walkthrough.gif` / `walkthrough.mp4`.** They were recorded
+> before the "12× random" → "~7× random" correction and have the stale (wrong)
+> number baked into a frame. Re-record from the live demo before using either,
+> or leave them out — the thread doesn't need them.
