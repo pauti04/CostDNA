@@ -2,7 +2,8 @@
  * Mirrors tests/test_audit.py so the TS port is verified against the
  * same patterns the Python implementation catches:
  *   - Microsoft Azure: deployment_id ≡ subscription_id (100% deterministic)
- *   - Microsoft Philly: user_id → vc (~85% deterministic)
+ *   - Microsoft Philly: user_id → vc (~95% deterministic; fixture below uses a
+ *     90% example to exercise partial-determinism detection at the threshold)
  *   - Threshold respected
  *   - Clean data returns empty
  */
@@ -27,7 +28,7 @@ describe("findDeterministicEdges", () => {
     expect(dep!.determinism).toBeCloseTo(1.0, 5);
   });
 
-  it("flags Philly-style ~85% partial determinism", () => {
+  it("flags Philly-style partial determinism", () => {
     // 9 of 10 users (90%) map to a single vc → flagged at default 0.85
     const rows: Array<Record<string, string>> = [];
     for (let u = 1; u <= 9; u++) {

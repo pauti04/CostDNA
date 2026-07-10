@@ -418,7 +418,7 @@ export default function Home() {
                 <b className="text-text">6.9%</b> — still ~7× random, still beats every
                 feature-only baseline including node2vec, but a long way from 97%.
                 Same audit on Microsoft&apos;s Philly DL trace surfaced another partial
-                leak: 85% of users belong to one virtual cluster.{" "}
+                leak: ~95% of users belong to one virtual cluster.{" "}
                 <code className="text-text bg-bg-soft px-1.5 py-0.5 rounded text-sm">
                   user_id → vc
                 </code>{" "}
@@ -460,9 +460,9 @@ export default function Home() {
                       {
                         ds: "Microsoft Philly",
                         n: "117K jobs",
-                        first: "89%",
-                        shortcut: "user_id → vc (85% deterministic)",
-                        honest: "14% (2× rand)",
+                        first: "34%",
+                        shortcut: "user_id → vc (95% deterministic)",
+                        honest: "11% (~1.7× rand)",
                       },
                     ].map((r) => (
                       <tr key={r.ds}>
