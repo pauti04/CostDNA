@@ -303,7 +303,7 @@ footer a:hover { text-decoration: underline; }
       <p style="margin:0">Across all 33,205 deployments in the Azure trace, <b>100%</b> mapped 1:1 to a single subscription. So <code>deployment_id</code>, used as a graph edge, was a perfect lookup of <code>subscription_id</code>. LabelProp's "97%" was a graph database join, not learning.</p>
     </div>
 
-    <p>Most engineers stop when they see a high accuracy number and ship it. I caught the leak by asking <em>"are you sure data is accurate?"</em> The same audit on Microsoft's Philly DL trace surfaced another partial leak: 85% of users belong to exactly one virtual cluster, so user-IAM edges encoded most of the team-membership signal.</p>
+    <p>Most engineers stop when they see a high accuracy number and ship it. I caught the leak by asking <em>"are you sure data is accurate?"</em> The same audit on Microsoft's Philly DL trace surfaced another partial leak: ~95% of users belong to exactly one virtual cluster, so user-IAM edges encoded most of the team-membership signal.</p>
 
     <p>Three datasets, three different shortcuts, one consistent finding:</p>
 
@@ -331,9 +331,9 @@ footer a:hover { text-decoration: underline; }
           <td><b>Microsoft Philly</b></td>
           <td class="num">117K jobs</td>
           <td class="num">15</td>
-          <td class="num"><span class="flag-bad">89%</span></td>
-          <td><code>user_id → vc</code> (85% deterministic)</td>
-          <td class="num">14% (2× rand)</td>
+          <td class="num"><span class="flag-bad">34%</span></td>
+          <td><code>user_id → vc</code> (95% deterministic)</td>
+          <td class="num">11% (~1.7× rand)</td>
         </tr>
       </tbody>
     </table>

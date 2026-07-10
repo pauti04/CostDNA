@@ -125,15 +125,19 @@ Different domain (jobs, not VMs), different time period, different team
 Audit output:
 
 ```
-user_id: 0.850
-machine_id: 0.014
-...
+iam_role (user): 0.946
+vpc_cidr (machine): 0.144
+resource_type: 0.000
 ```
 
-`user_id` was 0.85 — 85% of users in the dataset belong to exactly one
-virtual cluster. Not 100% deterministic like Azure, but high enough that
-the graph edge does most of the work. With the user-edge removed, GraphSAGE
-on 15 classes drops from 89% to 14% (still 2× random).
+`user_id` was **0.946** — ~95% of users in the sampled trace (top-15 virtual
+clusters, ≤200 jobs each = 2,317 jobs) belong to exactly one virtual cluster.
+Not 100% deterministic like Azure, but high enough that the graph edge does
+most of the work. With the user edge removed, GraphSAGE on 15 classes drops
+from **34% to 11%** — still ~1.7× the 6.7% random floor. (On this de-leaked
+graph the pure-graph baseline LabelProp actually edges ahead at ~18%; the
+point isn't that GraphSAGE wins here, it's that *every* method collapses to
+the low teens once the user shortcut is gone.)
 
 **Two unrelated public datasets, same pattern.** The structural metadata
 columns (deployment IDs, user IDs, IAM principals) deterministically encode

@@ -94,7 +94,7 @@ Before claiming any "inferred tags" accuracy number to a customer, the model has
 
 Remove the leaking edges. Re-run. GraphSAGE on 100 classes: **6.9%** — still ~7× random, still beats every feature-only baseline including node2vec, but a long way from 97%.
 
-Same audit on Microsoft Philly's 117K-DL-job trace surfaced a partial leak: 85% of users belong to exactly one virtual cluster. `user_id → vc` was near-deterministic. With user edges removed: 15% (still 2× random).
+Same audit on Microsoft Philly's 117K-DL-job trace surfaced a partial leak: `user_id → vc` is **~95% deterministic** (0.946 on the sampled 15-VC trace). With the user edge removed, GraphSAGE at 15 VCs drops from **34% to 11%** — still ~1.7× the 6.7% random floor. Reproduce end-to-end (audit → leaky vs de-leaked sweep) with [`scripts/bench-philly.py`](scripts/bench-philly.py).
 
 ### The methodological claim
 

@@ -88,7 +88,7 @@ The model **fails** on accounts that have:
 | Dataset                         | Behavioral accuracy | Note |
 |---------------------------------|---------------------|------|
 | Microsoft Azure (post-audit)    | 6.9% on 100 classes | Thin per-resource features (summary CPU only) |
-| Microsoft Philly (post-audit)   | 14% on 15 VCs       | User-edge leak removed; still 2× random |
+| Microsoft Philly (post-audit)   | 11% on 15 VCs       | User-edge (0.95-deterministic) removed; still ~1.7× random |
 | Real-AWS Terraform env (pilot)  | 87% on 15 labels    | Wide CI; engineering validation, not methodology |
 | Synthetic env (controlled)      | 90% on 4 teams      | Ablation, by-construction the regime the model was designed for |
 

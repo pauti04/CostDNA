@@ -57,27 +57,27 @@ chance a maintainer or researcher engages.
 
 **Repo:** https://github.com/msr-fiddle/philly-traces
 
-**Title:** Note for attribution/prediction users: `user_id` is ~85% deterministic of virtual cluster
+**Title:** Note for attribution/prediction users: `user_id` is ~95% deterministic of virtual cluster
 
 **Body:**
 
 > Thanks for releasing this trace.
 >
 > For anyone using it for **team/cluster attribution or ownership prediction**
-> (vs. the scheduling analysis it was published for): `user_id` is ~85%
+> (vs. the scheduling analysis it was published for): `user_id` is ~95%
 > deterministic of the virtual cluster — most users appear in exactly one VC.
 >
 > ```python
 > (df.groupby("user_id")["vc"].nunique() == 1).mean()
-> # → ~0.85
+> # → ~0.95   (0.946 on a top-15-VC, ≤200-jobs-per-VC sample)
 > ```
 >
 > That's not a defect — it reflects how people are organized — but it means a
 > model using `user_id` as a signal to predict `vc` is mostly exploiting a
 > near-deterministic mapping rather than learning behavioral structure. On a
-> graph-attribution baseline it took accuracy from ~89% (with the user edge) to
-> ~14% (without). Same pattern I found on the Azure public trace, which is what
-> prompted me to check here too.
+> graph-attribution baseline it took accuracy from ~34% (with the user edge) to
+> ~11% (without) at 15 virtual clusters. Same pattern I found on the Azure public
+> trace, which is what prompted me to check here too.
 >
 > Flagging in case it's useful to note for attribution-benchmark users. Writeup
 > + a small reusable check: <link>.

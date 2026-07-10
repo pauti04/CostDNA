@@ -47,10 +47,10 @@ Same audit:
 ```python
 users_per_vc = df.groupby("user_id")["vc"].nunique()
 print((users_per_vc == 1).mean())
-# → 0.85
+# → 0.946
 ```
 
-**85% of users belong to exactly one VC.** Not 100% — but close enough that `user_id` is a near-tautological signal for `vc`. With user edges enabled, GraphSAGE hits 71.5%. Strip them and it falls to 15%.
+**~95% of users belong to exactly one VC.** Not 100% — but close enough that `user_id` is a near-tautological signal for `vc`. With the user edge enabled, GraphSAGE at 15 VCs hits 34%. Strip it and it falls to 11% (still ~1.7× the 6.7% random floor).
 
 Two datasets. Two different shortcuts. One consistent finding: **production cloud attribution is mostly a metadata-lookup problem.** The dominant signal is structural — deployment IDs, IAM principals, machine assignments — not behavioral time-series. Behavioral fingerprinting matters specifically when metadata is missing or unreliable.
 

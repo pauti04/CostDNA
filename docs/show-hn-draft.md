@@ -129,8 +129,9 @@ accuracy on 100 classes was **6.9%** — still ~7× random, still beats
 every non-graph baseline including node2vec, but a long way from 97%.
 
 I ran the same audit on Microsoft Philly's 117K-DL-job trace. Found
-another partial leak: 85% of users belong to exactly one virtual
-cluster. With user edges removed: 15%.
+another partial leak: ~95% of users belong to exactly one virtual
+cluster. With the user edge removed, GraphSAGE at 15 VCs drops from
+34% to 11% (still ~1.7× random).
 
 Two unrelated public datasets, same pattern. I argue prior published
 work in cloud-resource attribution has likely been measuring leakage

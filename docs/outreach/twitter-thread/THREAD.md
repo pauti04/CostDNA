@@ -186,7 +186,7 @@ strongest finding.
 ```
 I ran the same audit on Microsoft Philly's 117K-DL-job trace.
 
-Same pattern. 85% of users belong to exactly one virtual cluster. user_id → vc
+Same pattern. ~95% of users belong to exactly one virtual cluster. user_id → vc
 was near-deterministic.
 
 Two unrelated public datasets. Two different structural shortcuts. One

@@ -87,7 +87,7 @@ nOps does multi-cloud cost intelligence, which means you've almost certainly hit
 
 The short version: `deployment_id` (which I was using as a graph edge) maps 1:1 to `subscription_id` across all 33,205 deployments in the dataset. So my GNN's "97% accuracy" was a graph-database join, not learning. Honest GraphSAGE accuracy with the leak removed: **6.9%** on 100 classes — still ~7× random and beats every non-graph baseline (including node2vec), but a long way from 97%.
 
-Same audit on Microsoft Philly's 117K-job trace exposed an 85%-deterministic `user_id → vc` shortcut. Two datasets, same finding: structural metadata dominates real cloud attribution.
+Same audit on Microsoft Philly's 117K-job trace exposed a ~95%-deterministic `user_id → vc` shortcut. Two datasets, same finding: structural metadata dominates real cloud attribution.
 
 Open-source, self-hosted, read-only: github.com/pauti04/CostDNA · cost-dna.vercel.app. CostDNA is the behavioural-fallback attribution layer for the resources where structural metadata fails — upstream of a multi-cloud intelligence product like nOps. Worth a conversation?
 
