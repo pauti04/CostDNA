@@ -7,13 +7,18 @@
  * check on your own dataset before reporting accuracy" — and lets the
  * visitor actually run it on a CSV. Pure client-side. No upload.
  *
- * Two paths:
- *   1. Try with sample → loads a 60-row CSV with a deliberate leak
- *      (deployment_id ≡ subscription_id) so visitors see the check
- *      firing within 3 seconds of clicking.
- *   2. Drop your own CSV → audit runs on the visitor's actual data.
- *      Useful when they want to verify the claim against a real
- *      published-cloud or proprietary dataset.
+ * Three paths:
+ *   1. Azure-style sample → a 60-row CSV with a 100% leak
+ *      (deployment_id ≡ subscription_id).
+ *   2. Philly-style sample → a partial leak: user_id is ~95%
+ *      deterministic of vc, machine_id is ~15%. Teaches the point the
+ *      re-verification surfaced — leakage is a *gradient*, not a binary.
+ *   3. Drop your own CSV → audit runs on the visitor's actual data.
+ *
+ * Results show the FULL determinism spectrum (every candidate column
+ * ranked), with the threshold as the leak/clean divider — so a partial
+ * leak is visible sitting above the honest signals, not hidden behind a
+ * binary "leak / no-leak".
  */
 
 import { useCallback, useState } from "react";
@@ -26,24 +31,15 @@ import {
 
 
 /**
- * 60-row sample that reproduces the Azure-trace pattern in miniature.
- * Each deployment_id maps 1:1 to a single subscription_id, exactly
- * like the original audit finding. cpu_avg is a genuine non-leaking
- * behavioural feature for contrast.
+ * 60-row sample reproducing the Azure-trace pattern: each deployment_id
+ * maps 1:1 to a single subscription_id (100% leak). cpu_bucket / type
+ * span multiple subscriptions, so only deployment_id fires.
  */
-function generateSampleCsv(): string {
+function generateAzureSampleCsv(): string {
   const header = "deployment_id,subscription_id,cpu_bucket,resource_type,team";
   const rows: string[] = [header];
   const teams = ["backend", "data", "ml", "platform"];
   const types = ["vm", "rds", "lambda", "s3"];
-  // cpu_bucket has only 4 distinct values across the 60 rows. By design each
-  // bucket appears in multiple subscriptions, so cpu_bucket does NOT
-  // deterministically encode subscription_id — that makes deployment_id the
-  // only column flagged by the default 0.85 threshold. (A previous version
-  // used cpu_avg as floats; the audit caught that too, but only because
-  // 60 rows was too small to repeat values — a noisy result that confused
-  // visitors. Bucketing keeps the demo's "look, only the leak fires" punch
-  // and is closer to how real cloud features actually look.)
   const cpuBuckets = ["low", "medium", "high", "spike"];
   for (let d = 1; d <= 12; d++) {
     const sub = `sub-${["alpha", "beta", "gamma", "delta"][d % 4]}`;
@@ -61,12 +57,55 @@ function generateSampleCsv(): string {
 }
 
 
+/**
+ * Philly-style PARTIAL leak, mirroring the real re-verified finding
+ * (scripts/bench-philly.py): user_id is ~95% deterministic of the virtual
+ * cluster (38 of 40 users live in one vc; 2 span two), while machine_id is
+ * a shared pool across clusters → low determinism. gpu_bucket is noise.
+ * This is the honest, more interesting case — a leak that isn't 100%.
+ */
+function generatePhillySampleCsv(): string {
+  const header = "job_id,user_id,machine_id,gpu_bucket,vc";
+  const rows: string[] = [header];
+  const vcs = ["vc-research", "vc-vision", "vc-nlp", "vc-speech", "vc-rl"];
+  const machines = Array.from({ length: 10 }, (_, i) => `m${(i + 1).toString().padStart(3, "0")}`);
+  const gpuBuckets = ["1gpu", "2gpu", "4gpu", "8gpu"];
+  const N_USERS = 40;
+  let job = 0;
+  for (let u = 1; u <= N_USERS; u++) {
+    const homeVc = vcs[u % vcs.length];
+    const spansTwo = u === 7 || u === 23;          // 2/40 → determinism 0.95
+    for (let j = 0; j < 2; j++) {
+      const vc = spansTwo && j === 1 ? vcs[(u + 1) % vcs.length] : homeVc;
+      // Most machines are a shared pool (span many vcs → low determinism);
+      // two users run on cluster-dedicated boxes so machine_id lands at
+      // ~15%, mirroring the real Philly machine→vc figure (0.144) rather
+      // than a sterile 0%.
+      const machine = u <= 2
+        ? `m-${homeVc}-dedicated`
+        : machines[(u * 3 + j * 7) % machines.length];
+      rows.push([
+        `job-${(++job).toString().padStart(4, "0")}`,
+        `user-${u.toString().padStart(2, "0")}`,
+        machine,
+        gpuBuckets[(u + j) % gpuBuckets.length],
+        vc,
+      ].join(","));
+    }
+  }
+  return rows.join("\n") + "\n";
+}
+
+
 export default function AuditChecker() {
   const [rows, setRows] = useState<Array<Record<string, string>> | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   const [targetCol, setTargetCol] = useState<string>("");
   const [filename, setFilename] = useState<string>("");
-  const [results, setResults] = useState<AuditResult[] | null>(null);
+  // Full spectrum: every candidate ranked (computed with threshold 0). The
+  // leak/clean split is applied in the UI at `threshold` so moving the
+  // threshold reclassifies rows without re-scanning.
+  const [spectrum, setSpectrum] = useState<AuditResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(0.85);
 
@@ -78,12 +117,10 @@ export default function AuditChecker() {
       setRows(rows);
       setColumns(columns);
       setFilename(name);
-      // Default target = the column whose name looks like a label / id
-      // / subscription / team / class. Falls back to the last column.
       const targetGuess = columns.find((c) => /target|label|class|team|subscription|vc/i.test(c))
         ?? columns[columns.length - 1];
       setTargetCol(targetGuess);
-      setResults(null);
+      setSpectrum(null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to parse CSV");
     }
@@ -97,26 +134,25 @@ export default function AuditChecker() {
     ingest(await file.text(), file.name);
   }, [ingest]);
 
-  const trySample = useCallback(() => {
-    ingest(generateSampleCsv(), "sample-with-leak.csv");
-  }, [ingest]);
-
   const runAudit = useCallback(() => {
     if (!rows || !targetCol) return;
     setError(null);
     try {
       const candidates = columns.filter((c) => c !== targetCol);
-      const out = findDeterministicEdges(rows, targetCol, candidates, threshold);
-      setResults(out);
+      // threshold 0 → return EVERY candidate with its determinism, ranked.
+      const all = findDeterministicEdges(rows, targetCol, candidates, 0);
+      setSpectrum(all);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Audit failed");
     }
-  }, [rows, columns, targetCol, threshold]);
+  }, [rows, columns, targetCol]);
 
   const reset = useCallback(() => {
     setRows(null); setColumns([]); setTargetCol(""); setFilename("");
-    setResults(null); setError(null);
+    setSpectrum(null); setError(null);
   }, []);
+
+  const leaks = spectrum?.filter((r) => r.determinism >= threshold) ?? [];
 
   return (
     <div className="rounded-xl border border-border bg-bg overflow-hidden">
@@ -143,10 +179,17 @@ export default function AuditChecker() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={trySample}
+                onClick={() => ingest(generateAzureSampleCsv(), "azure-sample-100pct-leak.csv")}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-bg-deep text-text-on-deep font-medium text-sm hover:brightness-110 transition"
               >
-                Try with sample (Azure-style leak) →
+                Azure-style leak (100%) →
+              </button>
+              <button
+                type="button"
+                onClick={() => ingest(generatePhillySampleCsv(), "philly-sample-partial-leak.csv")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-bg-deep text-text-on-deep font-medium text-sm hover:brightness-110 transition"
+              >
+                Philly-style partial leak (~95%) →
               </button>
               <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md border border-border bg-bg-section text-text font-medium text-sm hover:border-text transition cursor-pointer">
                 Drop your CSV
@@ -161,9 +204,11 @@ export default function AuditChecker() {
                 />
               </label>
             </div>
-            <p className="mt-4 text-xs text-text-muted">
-              Sample: 60 rows, deployment_id deterministically maps to
-              subscription_id (the original Azure-trace pattern).
+            <p className="mt-4 text-xs text-text-muted leading-relaxed">
+              The two samples show the range: Azure&apos;s <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">deployment_id</code> is
+              a <b className="text-text">100%</b> lookup of the label; Philly&apos;s <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">user_id</code> is
+              a <b className="text-text">~95%</b> partial leak sitting just above the honest <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">machine_id</code> signal.
+              Leakage is a gradient — that&apos;s why the threshold matters.
             </p>
           </>
         )}
@@ -192,7 +237,7 @@ export default function AuditChecker() {
                 </span>
                 <select
                   value={targetCol}
-                  onChange={(e) => { setTargetCol(e.target.value); setResults(null); }}
+                  onChange={(e) => { setTargetCol(e.target.value); setSpectrum(null); }}
                   className="w-full font-mono text-xs px-3 py-2 rounded-md border border-border bg-bg-section text-text"
                 >
                   {columns.map((c) => (
@@ -223,40 +268,40 @@ export default function AuditChecker() {
               </button>
             </div>
 
-            {results !== null && (
+            {spectrum !== null && (
               <div className="mt-4 border-t border-border pt-5">
-                {results.length === 0 ? (
+                {spectrum.length === 0 ? (
                   <div className="p-4 rounded-lg bg-bg-section border-l-4 border-text">
-                    <div className="font-semibold text-text mb-1">No leaks detected</div>
+                    <div className="font-semibold text-text mb-1">No candidate columns</div>
                     <p className="text-xs text-text-soft leading-relaxed">
-                      Every non-target column you provided has determinism &lt;{" "}
-                      {threshold.toFixed(2)}. Either the columns you passed in
-                      genuinely span multiple target values, or your candidate
-                      list missed the leaking one. The audit only checks what
-                      you ask it to check.
+                      There were no non-target columns to check. Add candidate
+                      columns to the CSV, or pick a different target.
                     </p>
                   </div>
                 ) : (
                   <>
-                    <div className="text-xs uppercase tracking-wider text-text-muted mb-3">
-                      Leaking columns (determinism ≥ {threshold.toFixed(2)})
+                    <div className="flex items-baseline justify-between mb-3">
+                      <div className="text-xs uppercase tracking-wider text-text-muted">
+                        Determinism of <code className="font-mono text-text">{targetCol}</code> — every candidate, ranked
+                      </div>
+                      <div className="text-xs text-text-soft">
+                        {leaks.length === 0
+                          ? "no leaks ≥ threshold"
+                          : `${leaks.length} leaking ≥ ${threshold.toFixed(2)}`}
+                      </div>
                     </div>
                     <div className="rounded-lg border border-border overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-bg-soft">
                           <tr>
                             <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-soft font-semibold">Column</th>
-                            <th className="px-4 py-2 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">Determinism</th>
-                            <th className="px-4 py-2 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">Distinct values</th>
+                            <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-soft font-semibold">Determinism</th>
+                            <th className="px-4 py-2 text-right text-xs uppercase tracking-wider text-text-soft font-semibold">Verdict</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border bg-bg-section">
-                          {results.map((r) => {
-                            // High-cardinality flag: if a column has nearly
-                            // as many distinct values as rows, the 1:1
-                            // mapping may be coincidence (few values repeat
-                            // at all), not a structural leak. Surface this
-                            // so visitors don't misread the result.
+                          {spectrum.map((r) => {
+                            const isLeak = r.determinism >= threshold;
                             const highCardinality = rows!
                               && r.nDistinctValues > 0.8 * rows!.length;
                             return (
@@ -272,11 +317,26 @@ export default function AuditChecker() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-4 py-2.5 text-right font-mono text-text font-semibold">
-                                  {(r.determinism * 100).toFixed(1)}%
+                                <td className="px-4 py-2.5">
+                                  {/* mini determinism bar */}
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-24 rounded-full bg-bg-soft overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full ${isLeak ? "bg-bad" : "bg-text/40"}`}
+                                        style={{ width: `${Math.round(r.determinism * 100)}%` }}
+                                      />
+                                    </div>
+                                    <span className={`font-mono text-xs ${isLeak ? "text-text font-semibold" : "text-text-soft"}`}>
+                                      {(r.determinism * 100).toFixed(1)}%
+                                    </span>
+                                  </div>
                                 </td>
-                                <td className="px-4 py-2.5 text-right font-mono text-text-soft">
-                                  {r.nDistinctValues.toLocaleString()}
+                                <td className="px-4 py-2.5 text-right">
+                                  {isLeak ? (
+                                    <span className="text-[10px] uppercase tracking-wider font-semibold text-bad">⚠ leak — drop it</span>
+                                  ) : (
+                                    <span className="text-[10px] uppercase tracking-wider text-text-muted">honest signal</span>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -285,12 +345,24 @@ export default function AuditChecker() {
                       </table>
                     </div>
                     <p className="mt-3 text-xs text-text-muted leading-relaxed">
-                      ⚠ Each row above is a column that deterministically
-                      encodes <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">{targetCol}</code>.
-                      Using any of these as a graph edge or feature reproduces
-                      the failure mode the methodology audit documents. Drop
-                      them, then re-run your model on the honest signal.
+                      {leaks.length > 0 ? (
+                        <>⚠ Columns above the {threshold.toFixed(2)} line deterministically
+                        encode <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">{targetCol}</code> —
+                        using them as a graph edge or feature reproduces the leakage the
+                        methodology audit documents. Drop them and re-run on the honest signal below the line.</>
+                      ) : (
+                        <>No column clears {threshold.toFixed(2)}. These candidates span multiple
+                        target values — but absence of evidence isn&apos;t evidence of absence; the audit
+                        only checks the columns you pass it.</>
+                      )}
                     </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-soft">
+                      <span>Want this in CI?</span>
+                      <code className="font-mono text-text bg-bg-soft px-1.5 py-0.5 rounded">pip install leakaudit</code>
+                      <span className="text-text-muted">— the same check as a one-liner or a{" "}
+                        <code className="font-mono text-text bg-bg-soft px-1 py-0.5 rounded">--fail-on-leak</code> gate.
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
