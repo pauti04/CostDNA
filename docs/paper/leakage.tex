@@ -1,0 +1,466 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{verbatim}
+\usepackage{xcolor}
+\usepackage[round,authoryear]{natbib}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\textbf{Measuring Leakage, Not Learning:\\
+Structural Label Leakage in Cloud-Resource\\ Attribution Benchmarks}}
+
+\author{Parth Auti\\
+\small Independent \quad\textbar\quad \href{https://github.com/pauti04/CostDNA}{\code{github.com/pauti04/CostDNA}}}
+
+\date{2026 \quad\textbar\quad Preprint}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Cloud-resource attribution --- inferring which team owns each resource in a
+mostly-untagged cloud account --- is increasingly posed as a graph
+node-classification problem, with reported accuracies in the 85--97\% range on
+public traces. We show that these numbers are substantially inflated by
+\emph{structural label leakage}: metadata columns routinely used as graph
+edges (deployment identifiers, user identifiers, IAM principals) are
+near-deterministic functions of the attribution target, so message passing
+along them reduces the ``prediction'' to a database join. On Microsoft's
+2.6M-VM Azure Public Dataset, a single graph edge (\code{deployment\_id}) maps
+one-to-one to the target subscription across all 33{,}205 deployments;
+removing it drops GraphSAGE from a headline 97\% to \textbf{6.9\%} on 100-class
+attribution --- still ${\sim}7\times$ random, but far from the headline. The
+same audit on the Philly GPU-cluster trace finds \code{user\_id} 94.6\%
+deterministic of the virtual cluster, dropping GraphSAGE from 34\% to 11\% at
+15 clusters. We propose a two-line \emph{determinism audit} as a minimum
+reporting standard, apply it reflexively to our own synthetic benchmark
+(which it also flags, by construction), and release honest post-audit
+baselines, a reproducible harness, and a \code{pip}-installable implementation.
+Our central claim, stated to be falsifiable: prior cloud-attribution results
+have likely been measuring leakage rather than learning.
+\end{abstract}
+
+\section{Introduction}
+
+Public cloud accounts accumulate resources faster than they accumulate
+governance. On a typical account, 40--60\% of spend is \emph{untagged}: the
+line item exists, the dollars are real, but no metadata says which team owns
+it. Every downstream cost tool --- CloudHealth, Vantage, Kubecost, native Cost
+Allocation Tags --- reads tags, so untagged spend collapses into a single
+opaque bucket. \emph{Cloud-resource attribution} is the task of recovering the
+missing owner: given behavioral signals (API-call patterns, IAM access, cost
+time-series shape, network topology), predict the owning team for each
+resource.
+
+Because resources and their interactions form a natural graph, attribution is
+attractive to pose as graph node classification, and graph neural networks
+(GNNs) such as GraphSAGE~\citep{hamilton2017graphsage} are a natural fit.
+Reported accuracies on published cloud traces are high --- frequently
+85--97\% --- which, on problems with tens to hundreds of classes, should
+invite suspicion rather than celebration: state-of-the-art results on much
+easier supervised problems rarely clear 95\%.
+
+This paper argues that the high numbers are largely an artifact of
+\textbf{structural label leakage}. Cloud datasets ship rich structural
+metadata --- deployment identifiers, request identifiers, user identifiers,
+IAM role names --- and it is natural to wire these in as graph edges. But
+these columns are not independent behavioral signals; they are
+\emph{near-deterministic functions of the attribution target}, because of how
+organizations provision cloud resources. A deployment is scoped to one
+subscription; a user belongs to one team. When such a column is used as a
+graph edge, message passing propagates the label along an edge that already
+encodes the label. The model is not learning behavior; it is performing a
+join.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item We identify structural label leakage as a systematic confound in
+  cloud-attribution benchmarks and give a precise, model-agnostic
+  \emph{determinism audit} for detecting it (Section~\ref{sec:method}).
+  \item We apply the audit to two independent, widely-used Microsoft datasets
+  --- the 2.6M-VM Azure Public Dataset and the 117K-job Philly GPU-cluster
+  trace --- and report honest post-audit baselines. On Azure, GraphSAGE falls
+  from a 97\% headline to \textbf{6.9\%} at 100 classes; on Philly, from 34\%
+  to \textbf{11\%} at 15 clusters (Section~\ref{sec:results}).
+  \item We apply the audit \emph{reflexively} to our own synthetic benchmark,
+  which it also flags, and disclose rather than special-plead
+  (Section~\ref{sec:reflexive}).
+  \item We release a reproducible harness, per-dataset benchmark scripts, and
+  a \code{pip}-installable implementation of the audit
+  (\code{leakaudit}), so the check is one line in any pipeline
+  (Section~\ref{sec:repro}).
+\end{enumerate}
+
+We state our thesis as a falsifiable claim: \emph{across published
+cloud-attribution benchmarks, the dominant predictive signal is structural
+metadata that deterministically encodes the target, and honest behavioral
+attribution is much weaker than the literature suggests.} We would be glad to
+be shown a counterexample (Section~\ref{sec:discussion}).
+
+\section{Background and Related Work}
+
+\paragraph{Label / target leakage.} Leakage --- information about the target
+leaking into features that would not be available at prediction time, or that
+trivially encodes the label --- is a well-known failure mode in applied
+machine learning~\citep{kaufman2012leakage}. Our contribution is not the
+concept but its specific, systematic form in cloud-attribution \emph{graphs},
+where the leak enters through edge construction rather than through a feature
+column, and a mechanical audit that catches it.
+
+\paragraph{Shortcut learning.} Models frequently exploit spurious but
+predictive shortcuts rather than the intended
+signal~\citep{geirhos2020shortcut}. Structural leakage is a shortcut with an
+unusually clean signature: the shortcut edge is a near-perfect lookup table,
+so the effect is not subtle degradation under distribution shift but an
+inflated in-distribution number that collapses the moment the edge is removed.
+
+\paragraph{Graph learning and baselines.} We evaluate GraphSAGE
+\citep{hamilton2017graphsage} against label propagation
+\citep{zhu2002labelprop}, a \code{node2vec} embedding
+\citep{grover2016node2vec} fed to logistic regression, and standard
+feature-only baselines. Label propagation is the sharpest diagnostic: with no
+learned parameters, it simply spreads labels across edges, so a leaking edge
+sends it straight to a near-perfect score.
+
+\paragraph{Datasets.} The Azure Public Dataset derives from Microsoft's
+Resource Central~\citep{cortez2017resourcecentral}; the Philly traces are the
+Microsoft GPU-cluster workload study of \citet{jeon2019philly}. Both were
+released for systems research (workload prediction, scheduling), not for
+attribution --- our use is off-label, and the leakage we report is a property
+of that off-label use, not a defect in the datasets.
+
+\paragraph{Calibration.} Where we report confidence, it is calibrated
+post-hoc via temperature scaling~\citep{guo2017calibration}.
+
+\section{The Determinism Audit}
+\label{sec:method}
+
+Let a dataset be a table with a target column $t$ (the attribution label) and
+a set of candidate columns $\{c\}$ that could be used as graph edges or
+features. For a candidate column $c$, partition the rows by the value of $c$
+and, within each group, count the distinct values of $t$. Define the
+\emph{determinism} of $c$ with respect to $t$ as the fraction of $c$-groups
+that map to exactly one target value:
+\[
+  D(c, t) \;=\;
+  \frac{\bigl|\{\, v \in \mathrm{vals}(c) \;:\; |\{\, t(r) : c(r) = v \,\}| = 1 \,\}\bigr|}
+       {|\mathrm{vals}(c)|}.
+\]
+$D(c,t) = 1$ means every value of $c$ maps to a single target value: $c$ is
+a perfect lookup of $t$. Using such a $c$ as a graph edge makes label
+propagation exact and gives any message-passing model the answer for free.
+Values below $1$ indicate \emph{partial} leakage --- still enough, at high
+values, for an edge to carry most of the signal.
+
+In code, the audit is two lines of \code{pandas} per candidate:
+
+\begin{quote}
+\begin{verbatim}
+for c in candidate_edge_cols:
+    determinism = (df.groupby(c)[target].nunique() == 1).mean()
+    if determinism >= threshold:      # flag c as leaking
+        print(c, determinism)
+\end{verbatim}
+\end{quote}
+
+We use a default threshold of $0.85$. Two caveats matter in practice.
+\emph{(i) High cardinality.} A column with as many distinct values as rows
+(e.g. a primary-key identifier) is trivially deterministic; we flag such
+columns separately, because their determinism is a cardinality artifact rather
+than a structural leak, though both should be excluded from the graph.
+\emph{(ii) Coverage.} The audit only checks the columns it is given; a clean
+report is evidence about those columns, not a guarantee of no leakage
+elsewhere.
+
+\section{Datasets and Setup}
+
+\paragraph{Azure Public Dataset.} 2.6M virtual machines across 100
+subscriptions over 30 days~\citep{cortez2017resourcecentral}. We treat the
+subscription as the attribution target and build a resource graph from
+metadata columns. The trace ships \emph{summary} CPU statistics (max / average
+/ p95) per VM rather than the full hourly time series, so per-resource
+features are thin --- a limitation we return to.
+
+\paragraph{Philly GPU-cluster trace.} 117K deep-learning training jobs across
+virtual clusters~\citep{jeon2019philly}. The target is the virtual cluster.
+Each job carries a submitting user, the machines it ran on, GPU counts, and
+timing. We sample the top-15 clusters (${\le}200$ jobs each; 2{,}317 jobs) for
+the class-count sweep.
+
+\paragraph{Synthetic environment.} A controlled generator with configurable
+team count and injected hard cases (cross-team resources, reassigned
+ownership) used for ablations where the number of labels can be controlled.
+
+\paragraph{Models and protocol.} GraphSAGE against Majority, logistic
+regression, $k$-NN ($k{=}5$), label propagation, and \code{node2vec}$+$LR.
+Accuracy is a stratified train/test split averaged over random seeds
+(Azure: multi-seed; Philly: seeds $\{7,42,911\}$; 70/30 split, 80 epochs).
+Random-chance accuracy is $1/N$ for $N$ classes.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Azure: a 100\%-deterministic edge}
+
+Running the audit on the Azure metadata immediately flags \code{deployment\_id}
+at determinism $1.000$: across all 33{,}205 deployments in the trace, every
+deployment belongs to exactly one subscription. Wired in as a graph edge, it
+drives label propagation to a 97\% ``result'' on 100-class attribution --- a
+graph-database join, not learning. Removing the leaking edges and re-running
+gives the honest picture in Table~\ref{tab:azure}.
+
+\begin{table}[h]
+\centering
+\caption{Azure post-audit test accuracy (\%), leaking edges removed. Random
+$=1/N$. GraphSAGE wins consistently but the absolute numbers are modest,
+because the trace ships only summary CPU statistics per VM.}
+\label{tab:azure}
+\begin{tabular}{rrrrrrr}
+\toprule
+$N$ teams & Random & Majority & LogReg & $k$-NN & LabelProp & \textbf{GraphSAGE} \\
+\midrule
+5   & 20.0 & 17.2 & 31.3 & 28.6 & 20.0 & \textbf{34.6} \\
+10  & 10.0 &  8.4 & 18.3 & 17.3 & 10.0 & \textbf{22.5} \\
+25  &  4.0 &  3.3 &  9.2 & 10.0 &  4.0 & \textbf{10.6} \\
+50  &  2.0 &  1.6 &  5.8 &  6.2 &  2.0 & \textbf{9.2}  \\
+100 &  1.0 &  0.7 &  3.4 &  3.8 &  1.0 & \textbf{6.9}  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At 100 classes GraphSAGE scores $6.9 \pm 0.5$, roughly $7\times$ the 1\% random
+floor and ahead of every feature-only baseline, but an order of magnitude below
+the leaked 97\% headline. The gap over feature-only baselines is small because
+the features are thin; the point is not that behavioral attribution is
+worthless but that its honest ceiling on this trace is single-digit percent,
+not near-perfect.
+
+\subsection{Philly: a partial leak, same story}
+
+We ran the identical audit on a structurally unrelated dataset --- a different
+domain (training jobs, not VMs), a different team, a different target. The
+audit flags \code{user\_id} at determinism $0.946$: ${\sim}95\%$ of users
+submit to exactly one virtual cluster. The honest, non-leaking machine edge
+(\code{machine\_id}) sits at $0.144$ --- machines are shared across clusters,
+exactly the signal one would \emph{want}. Table~\ref{tab:philly} shows the
+before/after.
+
+\begin{table}[h]
+\centering
+\caption{Philly: GraphSAGE with the leaking \code{user\_id} edge (``leaky'')
+vs. with it removed (``de-leaked''), by cluster count. Removing one edge
+collapses accuracy roughly threefold.}
+\label{tab:philly}
+\begin{tabular}{rrrrr}
+\toprule
+$N$ clusters & Random & Leaky GraphSAGE & \textbf{De-leaked GraphSAGE} & Ratio to random \\
+\midrule
+3  & 33.3 & 91.2 & \textbf{54.4} & $1.6\times$ \\
+5  & 20.0 & 62.2 & \textbf{35.4} & $1.8\times$ \\
+10 & 10.0 & 42.9 & \textbf{18.4} & $1.8\times$ \\
+15 &  6.7 & 34.2 & \textbf{11.3} & $1.7\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A methodologically important detail: on the \emph{de-leaked} Philly graph,
+GraphSAGE does \textbf{not} win. Table~\ref{tab:philly15} gives the full sweep
+at 15 clusters; label propagation ($17.6\%$) and \code{node2vec}$+$LR
+($13.4\%$) both edge out GraphSAGE ($11.3\%$). We report this because it is
+true and because it sharpens the thesis: once the structural shortcut is gone,
+\emph{every} method collapses to the low teens. The interesting quantity is
+not which model wins the honest task but how far all of them fall from the
+leaked headline.
+
+\begin{table}[h]
+\centering
+\caption{Philly de-leaked, full baseline sweep at $N=15$ clusters
+(random $=6.7\%$), mean $\pm$ std over seeds $\{7,42,911\}$.}
+\label{tab:philly15}
+\begin{tabular}{lr}
+\toprule
+Model & Test accuracy (\%) \\
+\midrule
+Majority        & $7.4 \pm 0.1$ \\
+LogReg          & $4.2 \pm 0.2$ \\
+$k$-NN ($k{=}5$)& $8.4 \pm 0.2$ \\
+LabelProp       & $\mathbf{17.6 \pm 1.5}$ \\
+\code{node2vec}$+$LR & $13.4 \pm 0.6$ \\
+GraphSAGE       & $11.3 \pm 1.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two unrelated public datasets, the same signature: a structural-metadata
+column that deterministically encodes the target and, used as an edge, does
+almost all of the work.
+
+\subsection{The audit turned on ourselves}
+\label{sec:reflexive}
+
+A methodology paper that audits others must audit itself. Running the
+determinism check on our own synthetic benchmark flags \code{vpc\_cidr} and
+\code{iam\_role} at determinism $1.000$ --- the identical numeric signature we
+call a leak on Azure. This is \emph{by construction}: the generator models real
+organizational structure (each team owns a VPC; role names follow team
+conventions), and those columns are used as edges.
+
+We disclose rather than special-plead. The audit alone cannot distinguish a
+\emph{benchmark artifact} (Azure: exclude it) from \emph{deliberately modeled
+world-structure} (here: it is the thing being simulated); by the audit's own
+numeric standard, both trigger. Two facts keep the synthetic results
+meaningful: (i) an edge-dropout ablation shows $89.4\%$ accuracy with the graph
+\emph{entirely removed}, so the headline does not depend on the deterministic
+edges; and (ii) we label synthetic results as ablations, not headline numbers.
+The attribution tool itself now runs this audit on its own inputs before
+training and warns when any input column deterministically encodes the label.
+
+\subsection{A real, non-leaking validation}
+
+To check that behavioral attribution works \emph{at all} when features are
+rich, we provisioned a real AWS account with full CloudTrail via
+infrastructure-as-code, hand-labeled 15 resources across three teams, and ran
+end to end: $13/15 = 87\%$ correct overall, and $13/14 = 93\%$ among
+high-confidence predictions (the two errors both fell below the confidence
+threshold and were routed to human review, as designed). This validates the
+engineering pipeline, not the methodology --- with 15 labels the confidence
+interval is wide (Section~\ref{sec:limitations}) --- but it demonstrates that
+the collapse on public traces is a property of \emph{thin features plus
+structural leakage}, not of the approach.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Why this generalizes.} Structural leakage is not a Microsoft bug; it
+is a property of how cloud resources are provisioned. Engineering teams create
+resources inside deployments, and deployments are scoped to a single
+subscription, project, or cluster. The structural metadata therefore
+\emph{reflects the org chart}, and the org chart is exactly the attribution
+target. Any dataset generated this way will exhibit the pattern, and any
+graph-attribution method that uses the metadata as edges will exploit it.
+
+\paragraph{The falsifiable claim.} We state, to be refuted: prior published
+cloud-attribution results that use deployment / request / user / cluster
+identifiers as graph signals report accuracies inflated by structural leakage,
+and honest behavioral attribution on 100-class problems is single-digit to
+mid-teens percent. The claim fails if a cloud-attribution result exists that
+runs the determinism audit, excludes leaking edges, and still reports high
+behavioral accuracy. We have not found one; we would like to.
+
+\paragraph{A minimum reporting standard.} We propose that any
+cloud-attribution result report, alongside its accuracy, the determinism of
+every column used as an edge or feature with respect to the target. It is one
+line of code per column and it converts an unfalsifiable ``we got 95\%'' into a
+checkable claim.
+
+\section{Limitations}
+\label{sec:limitations}
+
+\textbf{Thin features on public traces.} The Azure trace ships summary CPU
+statistics only; the small margin of GraphSAGE over feature-only baselines
+partly reflects feature poverty, not a limit of graph learning. We cannot
+quantify the rich-feature regime on public data because no public trace we
+know of has both rich per-resource behavior and no structural leak ---
+itself a gap worth filling.
+
+\textbf{Small real-data label set.} The real-AWS validation has 15 labels;
+its 87\% point estimate carries a wide interval and must not be read as a
+methodology result. A production claim would need 100+ labels.
+
+\textbf{We do not re-run prior work.} Our thesis about the literature is an
+inference from two datasets plus the mechanism, not a re-audit of specific
+published systems; it is offered as a falsifiable hypothesis, not a proof.
+
+\textbf{Synthetic is synthetic.} The synthetic environment demonstrates the
+rich-feature regime by construction and, as disclosed, fails its own audit by
+construction; it is an ablation instrument, not evidence about real accuracy.
+
+\section{Reproducibility}
+\label{sec:repro}
+
+All results reproduce from the open-source repository. The determinism audit is
+released as a standalone, tested package:
+\begin{quote}
+\begin{verbatim}
+pip install leakaudit
+leakaudit data.csv --target subscription_id --fail-on-leak   # CI gate
+\end{verbatim}
+\end{quote}
+Per-dataset benchmark scripts (\code{scripts/bench-azure.py},
+\code{scripts/bench-philly.py}) regenerate Tables~\ref{tab:azure}--\ref{tab:philly15},
+including the leaky-vs-de-leaked comparison in a single artifact; the
+reflexive synthetic audit is pinned by a regression test. Code, data pointers,
+and the full harness are at
+\href{https://github.com/pauti04/CostDNA}{\code{github.com/pauti04/CostDNA}}.
+
+\section{Conclusion}
+
+Cloud-resource attribution looks nearly solved on public benchmarks and is
+not. The high numbers come from structural metadata that deterministically
+encodes the target and, used as a graph edge, turns learning into a lookup. A
+two-line determinism audit exposes it on two independent Microsoft datasets ---
+and, run reflexively, on our own. Honest behavioral attribution is real but
+modest: ${\sim}7\times$ random at 100 classes on Azure, ${\sim}1.7\times$ at
+15 clusters on Philly. We release the audit, the honest baselines, and the
+harness, and we invite the field to report the one number that makes the claim
+checkable: the determinism of every edge against the target.
+
+{\small
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem[Cortez et al.(2017)]{cortez2017resourcecentral}
+E.~Cortez, A.~Bonde, A.~Muzio, M.~Russinovich, M.~Fontoura, and R.~Bianchini.
+\newblock Resource Central: Understanding and predicting workloads for improved
+resource management in large cloud platforms.
+\newblock In \emph{SOSP}, 2017.
+
+\bibitem[Geirhos et al.(2020)]{geirhos2020shortcut}
+R.~Geirhos, J.-H. Jacobsen, C.~Michaelis, R.~Zemel, W.~Brendel, M.~Bethge, and
+F.~A. Wichmann.
+\newblock Shortcut learning in deep neural networks.
+\newblock \emph{Nature Machine Intelligence}, 2(11):665--673, 2020.
+
+\bibitem[Grover and Leskovec(2016)]{grover2016node2vec}
+A.~Grover and J.~Leskovec.
+\newblock node2vec: Scalable feature learning for networks.
+\newblock In \emph{KDD}, 2016.
+
+\bibitem[Guo et al.(2017)]{guo2017calibration}
+C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q. Weinberger.
+\newblock On calibration of modern neural networks.
+\newblock In \emph{ICML}, 2017.
+
+\bibitem[Hamilton et al.(2017)]{hamilton2017graphsage}
+W.~L. Hamilton, R.~Ying, and J.~Leskovec.
+\newblock Inductive representation learning on large graphs.
+\newblock In \emph{NeurIPS}, 2017.
+
+\bibitem[Jeon et al.(2019)]{jeon2019philly}
+M.~Jeon, S.~Venkataraman, A.~Phanishayee, J.~Qian, W.~Xiao, and F.~Yang.
+\newblock Analysis of large-scale multi-tenant GPU clusters for DNN training
+workloads.
+\newblock In \emph{USENIX ATC}, 2019.
+
+\bibitem[Kaufman et al.(2012)]{kaufman2012leakage}
+S.~Kaufman, S.~Rosset, C.~Perlich, and O.~Stitelman.
+\newblock Leakage in data mining: Formulation, detection, and avoidance.
+\newblock \emph{ACM TKDD}, 6(4):1--21, 2012.
+
+\bibitem[Zhu and Ghahramani(2002)]{zhu2002labelprop}
+X.~Zhu and Z.~Ghahramani.
+\newblock Learning from labeled and unlabeled data with label propagation.
+\newblock Technical Report CMU-CALD-02-107, Carnegie Mellon University, 2002.
+
+\end{thebibliography}
+}
+
+\end{document}
