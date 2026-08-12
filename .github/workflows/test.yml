@@ -58,5 +58,5 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install ruff
+      - run: pip install "ruff==0.15.12"
       - run: ruff check src/ tests/ simulation/
